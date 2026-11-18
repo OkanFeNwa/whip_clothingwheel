@@ -11,7 +11,7 @@ local function uiStrings()
         title = ClothingWheel.locale('menu.title'),
         back  = ClothingWheel.locale('menu.back'),
         choose = ClothingWheel.locale('menu.choose'),
-        lang  = tostring(Config.Locale or 'it'):lower(),
+        lang  = tostring(Config.Locale or 'en'):lower(),
     }
 end
 

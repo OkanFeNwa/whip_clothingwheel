@@ -13,7 +13,7 @@ ClothingWheel = ClothingWheel or {}
 
 local function localeTable(lang)
     if type(Config.Locales) ~= 'table' then return nil end
-    local key = tostring(lang or Config.Locale or 'it'):lower()
+    local key = tostring(lang or Config.Locale or 'en'):lower()
     return Config.Locales[key]
 end
 

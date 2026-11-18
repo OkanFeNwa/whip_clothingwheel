@@ -11,7 +11,7 @@ Config = Config or {}
 -- L'italiano usa le label scritte qui in Config.Slots, così le tue modifiche
 -- (per esempio "Orecchie") restano intatte. Le altre lingue hanno il blocco
 -- `slots` tradotto. Per aggiungere una lingua, copia un blocco e traducilo.
-Config.Locale = 'it'
+Config.Locale = 'en'
 
 Config.Locales = {
     it = {
@@ -412,10 +412,10 @@ Config.PickupAnim = {
     twoHanded = { armor = true, bag = true },
 }
 
--- Il glifo dell'atlas WHIP non ha maglie. `T` è un testo corto di 1 carattere:
--- il core lo disegna come "T" (T-shirt) invece della borsa del vecchio pulsante.
--- Le icone vere della maglia stanno nel sottomenu (Config.Slots[].icon = 'tops').
-Config.MenuIcon = 'T'
+-- Il pulsante F1 usa il glifo `shirt` aggiunto all'atlas di whip_core
+-- (html/js/glyphs.js, più la copia nel loading screen). Niente più "T" di testo.
+-- Le icone vere della maglia stanno anche nel sottomenu (Config.Slots[].icon = 'tops').
+Config.MenuIcon = 'shirt'
 
 -- Rate limit degli eventi protetti (ms).
 Config.RateLimit = 300

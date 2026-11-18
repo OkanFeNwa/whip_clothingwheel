@@ -7,17 +7,29 @@
 
 - Project: https://pictogrammers.com/library/mdi/
 - Source: https://github.com/Templarian/MaterialDesign
-- Used icons: `backup-restore`, `hat-fedora`, `glasses`, `ear-hearing`, `watch`, `mask`,
-  `tshirt-crew`, `tshirt-v`, `human-male`, `shoe-print`, `necklace`, `note-text`/`sticker`
-  equivalents, `bag-personal`.
+- Used icons: `backup-restore`, `hat-fedora`, `glasses`, `ear-hearing`, `watch`,
+  `tshirt-crew` / `tshirt-v` variants, `human-male`, `shoe-print`, `necklace`,
+  `note-text`/`sticker` equivalents, `bag-personal`.
 - License: Apache License 2.0 — full text in [`licenses/APACHE-2.0.txt`](licenses/APACHE-2.0.txt).
 - Pictogrammers' summary: https://github.com/Templarian/MaterialDesign/blob/master/LICENSE
 
 ## UIX Icons Solid
 
 - Project: https://github.com/mdrakibshekh/uix-icons
-- Used icons: `security-wristband` (bracelet), `denim-jacket` (jacket).
+- Used icons: `security-wristband` (bracelet), `balaclava` (full-face mask).
 - License: MIT — full text in [`licenses/UIX-MIT.txt`](licenses/UIX-MIT.txt).
+
+## IconOven
+
+- Project: https://iconoven.com/icons
+- Used icon: `bulletproof-vest` (jacket / `armor` slot).
+- License: MIT — full text in [`licenses/ICONOVEN-MIT.txt`](licenses/ICONOVEN-MIT.txt).
+
+## Huge Icons
+
+- Project: https://icon-sets.iconify.design/icon-sets/hugeicons/
+- Used icon: `long-sleeve-shirt` (`tops` slot).
+- License: MIT — full text in [`licenses/HUGEICONS-MIT.txt`](licenses/HUGEICONS-MIT.txt).
 
 ## WHIP core
 

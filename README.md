@@ -18,7 +18,9 @@ ensure whip_clothingwheel
 ```
 
 - `dependency 'whip_core'` and `@whip_core/lib/satellite.lua` are already in the manifest.
-- No changes to `whip_core` are required.
+- The F1 **shirt** icon uses a small additive glyph patch in `whip_core`; see
+  [`docs/core-shirt-glyph.md`](docs/core-shirt-glyph.md). Without it the button falls back to the
+  label's first letter (`C`). This server already has the patch applied.
 
 Repository: https://github.com/OkanFeNwa/whip_clothingwheel
 
@@ -32,7 +34,7 @@ git clone https://github.com/OkanFeNwa/whip_clothingwheel.git
 All visible text is translated. In `config.lua` change a single line:
 
 ```lua
-Config.Locale = 'it' -- it, en, es, fr, de
+Config.Locale = 'en' -- it, en, es, fr, de
 ```
 
 Complete `it`, `en`, `es`, `fr`, `de` blocks are included in `Config.Locales`. Copy a block to add
@@ -52,9 +54,10 @@ have `Config.Locales[lang].slots` with all names translated. Fallback is `en`, t
 
 Open the F1 wheel:
 
-1. Select **Clothes**. The core atlas has no shirt glyph and a satellite cannot add one, so the
-   button uses the character `T` (`Config.MenuIcon = 'T'`) as a T-shirt cue: it is no longer the
-   old bag. The real SVG shirt icon lives in the submenu.
+1. Select **Clothes**. The button uses the `shirt` glyph (`Config.MenuIcon = 'shirt'`) — a real
+   shirt icon on the F1 wheel, not the old bag and not the `T` text. See
+   [`docs/core-shirt-glyph.md`](docs/core-shirt-glyph.md): the glyph must exist in
+   `whip_core/html/js/glyphs.js` (this server already has it).
 2. The wheel closes and our submenu opens with the **same geometry as the WHIP wheel**: thick slabs
    of dark glass, a glow, a stat disc in the center and a pill below. The values (radii 126/258,
    lift 14, gap 1.4°, disc 176) are identical to `whip_core/html/css/ui.css` §5.
@@ -83,9 +86,11 @@ Ground props are created only by the lose event or export below.
 
 No emoji and no hand-drawn icons. The submenu uses real SVGs from Iconify, saved in the code:
 
-- **Material Design Icons** (Apache-2.0, Pictogrammers) for hat, glasses, ears, watch, shirt,
-  tank top, necklace, mask, decal and restore;
-- **UIX Icons Solid** (MIT) for bracelet and jacket.
+- **Material Design Icons** (Apache-2.0, Pictogrammers) for hat, glasses, ears, watch, tank top,
+  necklace, decal and restore;
+- **UIX Icons Solid** (MIT) for bracelet and the full-face mask (balaclava);
+- **IconOven** (MIT) for the bulletproof vest used by the jacket (`armor`) slot;
+- **Huge Icons** (MIT) for the long-sleeve shirt used by the `tops` slot.
 
 They are all 24×24, use `currentColor` and the core's box, so they stay sharp both at 28 px on the
 slices and at 60 px in the disc. The key is `Config.Slots[].icon`; `restore` is the circular arrow.
