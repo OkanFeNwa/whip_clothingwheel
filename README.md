@@ -188,8 +188,11 @@ core glyph, not an SVG key from our submenu.
 
 GTA V **does not expose a native** to get the world model of the drawable a ped wears:
 `GET_PED_PROP_MODEL` does not exist and `GetPedPropCollectionName` returns only the collection name
-(for example `female_freemode_beach`), not an object model. The exact mapping is therefore
-configured:
+(for example `female_freemode_beach`), not an object model. Even `KNOCK_OFF_PED_PROP` cannot help:
+decompiled scripts show it takes a Ped handle plus four behaviour flags, knocks off **all** props at
+once and returns `void`, so no object handle or slot identity comes back. The only reliable identity
+is the `GetPedPropIndex` / `GetPedPropTextureIndex` snapshot taken before the garment is removed.
+The exact mapping is therefore configured:
 
 ```lua
 -- config.lua
