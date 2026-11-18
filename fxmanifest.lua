@@ -10,6 +10,7 @@ dependency 'whip_core'
 
 ui_page 'html/index.html'
 
+-- tools/ is deliberately not listed in files{}: the manual whip_core patcher is never served to NUI.
 files {
     'html/index.html',
     'html/style.css',

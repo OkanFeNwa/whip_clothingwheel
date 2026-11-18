@@ -8,6 +8,21 @@ in `whip_core/html/js/glyphs.js`. A satellite cannot add a glyph at runtime: raw
 This is a small, purely additive patch. Re-apply it after updating `whip_core` if the update
 replaces these files.
 
+## Manual patch script (recommended)
+
+Double-click `tools/apply-core-shirt.cmd` (or run
+`powershell -NoProfile -ExecutionPolicy Bypass -File tools\apply-core-shirt.ps1 -Manual`) after every
+`whip_core` update. It is the scripted version of the three steps below:
+
+- it adds `shirt` to `whip_core/html/js/glyphs.js` and `whip_loadingscreen/html/js/icons.js`, and to
+  the `WhipGlyph` alias in `whip_core/types/client.lua`;
+- it is idempotent: if `shirt` is already there it changes nothing;
+- it saves a timestamped backup of every changed file in `tools/backups/`;
+- it refuses to run without `-Manual`, and `tools/` is deliberately not in `files {}`, so it is
+  never served to NUI and no player action can trigger it.
+
+The manual steps below are the fallback if a future core update changes the `emote:` anchor.
+
 ## 1. `whip_core/html/js/glyphs.js`
 
 Add this entry inside `var GLYPHS = { ... }`, right after the existing `bag` entry:

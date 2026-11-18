@@ -18,7 +18,8 @@ ensure whip_clothingwheel
 ```
 
 - `dependency 'whip_core'` and `@whip_core/lib/satellite.lua` are already in the manifest.
-- The F1 **shirt** icon uses a small additive glyph patch in `whip_core`; see
+- The F1 **shirt** icon uses a small additive glyph patch in `whip_core`. After every `whip_core`
+  update, double-click `tools/apply-core-shirt.cmd` by hand to re-apply it; see
   [`docs/core-shirt-glyph.md`](docs/core-shirt-glyph.md). Without it the button falls back to the
   label's first letter (`C`). This server already has the patch applied.
 
