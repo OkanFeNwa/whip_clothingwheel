@@ -1,21 +1,20 @@
 # whip_clothingwheel
 
-Satellite WHIP che mette un solo pulsante **Vestiti** nella ruota rapida **F1**. Premendolo si apre
-un **overlay NUI** che imita la ruota, ma è isolato: contiene solo i capi, **Ripristina** in alto al
-centro e **Indietro** in basso. Non compaiono phone, inventory, emotes o dev tools delle altre
-risorse WHIP.
+A WHIP satellite that puts a single **Clothes** button on the quick **F1** wheel. Pressing it opens
+an **NUI overlay** that mimics the wheel but is isolated: it only contains garments, with
+**Restore** at the top center and **Back** at the bottom. No phone, inventory, emotes or dev tools
+from other WHIP resources appear.
 
-Niente emoji. Le icone del sottomenu sono **SVG reali di Iconify**, incorporate in `html/app.js`:
-nessun fetch a runtime, nessuna dipendenza da CDN. La logica resta server-side: il client applica
-solo i valori che riceve.
+No emoji. The submenu icons are **real Iconify SVGs**, embedded in `html/app.js`: no runtime fetch,
+no CDN dependency. Logic stays server-side: the client only applies the values it receives.
 
-## Installazione
+## Installation
 
-La risorsa va in `resources/[custom]/whip_clothingwheel`. Il `server.cfg` carica già `ensure [custom]`
-dopo `whip_core`, quindi non serve aggiungere nulla.
+Put the resource in `resources/[custom]/whip_clothingwheel`. Your `server.cfg` already runs
+`ensure [custom]` after `whip_core`, so nothing else is needed.
 
-- `dependency 'whip_core'` e `@whip_core/lib/satellite.lua` sono già nel manifest.
-- Nessuna modifica a `whip_core`.
+- `dependency 'whip_core'` and `@whip_core/lib/satellite.lua` are already in the manifest.
+- No changes to `whip_core` are required.
 
 Repository: https://github.com/OkanFeNwa/whip_clothingwheel
 
@@ -24,243 +23,239 @@ cd resources/[custom]
 git clone https://github.com/OkanFeNwa/whip_clothingwheel.git
 ```
 
-## Lingue
+## Languages
 
-Tutto il testo visibile è tradotto. In `config.lua` cambia una sola riga:
+All visible text is translated. In `config.lua` change a single line:
 
 ```lua
 Config.Locale = 'it' -- it, en, es, fr, de
 ```
 
-Sono inclusi i blocchi completi `it`, `en`, `es`, `fr`, `de` in `Config.Locales`. Copia un blocco per
-aggiungere una lingua. Italiano, inglese, spagnolo, francese e tedesco coprono:
+Complete `it`, `en`, `es`, `fr`, `de` blocks are included in `Config.Locales`. Copy a block to add
+another language. Italian, English, Spanish, French and German cover:
 
-- titolo e label del pulsante **Vestiti** nella ruota F1 e descrizione;
-- **Ripristina**, **Indietro**, stato delle slice e testo della pill;
-- prompt mondiale dei capi caduti (`Indossa <capo>`);
-- notifiche WHIP e messaggi dei comandi dev `/cwlose` e `/cwmodel`;
-- nomi dei capi nelle lingue diverse dall'italiano.
+- the title and label of the **Clothes** button on the F1 wheel, plus its description;
+- **Restore**, **Back**, slice states and the pill text;
+- the world prompt for dropped garments (`Wear <garment>`);
+- WHIP notifications and the `/cwlose` and `/cwmodel` dev command messages;
+- garment names in languages other than Italian.
 
-L'italiano non ha un blocco `slots`: usa direttamente le `label` che scrivi in `Config.Slots`, così
-personalizzazioni come `label = 'Orecchie'` non vengono mai sovrascritte da una traduzione. Le altre
-lingue hanno `Config.Locales[lang].slots` con tutti i nomi tradotti. Il fallback è `en`, poi `it`.
+Italian has no `slots` block: it uses the `label` values you write directly in `Config.Slots`, so
+customizations like `label = 'Orecchie'` are never overwritten by a translation. Other languages
+have `Config.Locales[lang].slots` with all names translated. Fallback is `en`, then `it`.
 
-## Come si usa
+## How to use
 
-Apri la ruota F1:
+Open the F1 wheel:
 
-1. Seleziona **Vestiti**. Nell'atlas del core non esiste un glifo maglia e un satellite non può
-   aggiungerlo, quindi il pulsante usa il carattere `T` (`Config.MenuIcon = 'T'`) come T-shirt:
-   non è più la borsa di prima. La vera icona maglia SVG sta nel sottomenu.
-2. La ruota si chiude e si apre il nostro sottomenu con la **stessa geometria della ruota WHIP**:
-   slab spesse in vetro scuro, alone di luce, disco statistico al centro e pill sotto. I valori
-   (raggi 126/258, distacco 14, gap 1.4°, disco 176) sono identici a `whip_core/html/css/ui.css` §5.
-3. Ogni slice mostra **solo l'icona del capo** e il suo nome: non c'è scritto «Togli cappello» o
-   simili. Passando sopra una slice, il disco centrale mostra l'icona grande e la pill in basso
-   mostra lo stato (indossato / non indossato / a terra).
-4. Clicca una slice per mettere o togliere quel capo. Il menu resta aperto e si aggiorna da solo.
-   Il disco centrale si riempie **solo quando cambi slice**, come `radSelect()` del core: muoversi
-   dentro la stessa slice non riavvia l'animazione.
-5. Un capo appena tolto resta **evidenziato in bianco** finché non lo risezioni o non lo rimetti
-   (anche dal prop a terra). Più capi tolti di seguito restano tutti accesi. **Ripristina** spegne
-   tutto.
-6. **Ripristina** è la prima slice, in alto al centro: riporta all'aspetto originario **tutti** i
-   capi, compresi slot nascosti come maniche (`arms`) e pantaloni (`legs`), e rimuove i drop. È
-   disabilitata quando non c'è nulla da ripristinare.
-7. **Indietro**, la pill in basso, chiude il sottomenu e **riapre la ruota rapida WHIP**. Fa lo stesso
-   Esc e il click destro.
+1. Select **Clothes**. The core atlas has no shirt glyph and a satellite cannot add one, so the
+   button uses the character `T` (`Config.MenuIcon = 'T'`) as a T-shirt cue: it is no longer the
+   old bag. The real SVG shirt icon lives in the submenu.
+2. The wheel closes and our submenu opens with the **same geometry as the WHIP wheel**: thick slabs
+   of dark glass, a glow, a stat disc in the center and a pill below. The values (radii 126/258,
+   lift 14, gap 1.4°, disc 176) are identical to `whip_core/html/css/ui.css` §5.
+3. Each slice shows **only the garment icon** and its name: no "Take off hat" text or similar.
+   Hovering a slice shows the large icon in the center disc and the state in the bottom pill
+   (worn / not worn / on the ground).
+4. Click a slice to put on or take off that garment. The menu stays open and updates itself. The
+   center disc fills **only when you change slice**, like the core's `radSelect()`: moving within
+   the same slice does not restart the animation.
+5. A just-removed garment stays **highlighted in white** until you select it again or put it back
+   on (even from the ground prop). Several garments removed in a row all stay lit. **Restore**
+   turns them all off.
+6. **Restore** is the first slice, at the top center: it brings **all** garments back to their
+   original appearance, including hidden slots such as sleeves (`arms`) and trousers (`legs`), and
+   removes drops. It is disabled when there is nothing to restore.
+7. **Back**, the pill at the bottom, closes the submenu and **reopens the WHIP quick wheel**. Esc and
+   right-click do the same.
 
-Se un capo è caduto a terra la sua slice è evidenziata in arancio e non è cliccabile: va indossata
-dall'oggetto nel mondo.
+If a garment has fallen to the ground, its slice is highlighted in orange and is not clickable: it
+must be worn from the object in the world.
 
-La ruota **non crea oggetti**: «togli» rimuove solo il componente/props dal ped. Gli oggetti a terra
-nascono solo dall'evento o dall'export di perdita qui sotto.
+The wheel **does not create objects**: "take off" only removes the component/prop from the ped.
+Ground props are created only by the lose event or export below.
 
-### Icone
+### Icons
 
-Niente emoji e niente icone disegnate a mano. Il sottomenu usa SVG reali presi da Iconify e salvati
-nel codice:
+No emoji and no hand-drawn icons. The submenu uses real SVGs from Iconify, saved in the code:
 
-- **Material Design Icons** (Apache-2.0, Pictogrammers) per cappello, occhiali, orecchie, orologio,
-  maglia, canottiera, collana, maschera, decalcomania e ripristino;
-- **UIX Icons Solid** (MIT) per braccialetto e giubbotto.
+- **Material Design Icons** (Apache-2.0, Pictogrammers) for hat, glasses, ears, watch, shirt,
+  tank top, necklace, mask, decal and restore;
+- **UIX Icons Solid** (MIT) for bracelet and jacket.
 
-Sono tutti a 24×24, usano `currentColor` e il box del core, quindi restano nitidi sia a 28 px sulle
-slice sia a 60 px nel disco. La chiave è `Config.Slots[].icon`; `restore` è la freccia circolare.
+They are all 24×24, use `currentColor` and the core's box, so they stay sharp both at 28 px on the
+slices and at 60 px in the disc. The key is `Config.Slots[].icon`; `restore` is the circular arrow.
 
-### Animazioni
+### Animations
 
-Ogni capo ha la sua clip e **mettere** e **togliere** usano due gesti diversi. Tutti i clip sono
-stati verificati contro il dump GTA V di WHIP:
+Every garment has its own clip, and **putting on** and **taking off** use two different gestures.
+All clips were verified against WHIP's GTA V dump:
 
-- cappello: `missheistdockssetup1hardhat@ / put_on_hat` e
+- hat: `missheistdockssetup1hardhat@ / put_on_hat` and
   `veh@common@fp_helmet@ / take_off_helmet_stand`;
-- occhiali: `clothingspecs / put_on` e `clothingspecs / take_off` (vere clip da negozio);
-- orecchie: `veh@common@fp_helmet@ / put_on_helmet` e
+- glasses: `clothingspecs / put_on` and `clothingspecs / take_off` (real shop clips);
+- ears: `veh@common@fp_helmet@ / put_on_helmet` and
   `mini@ears_defenders / takeoff_earsdefenders_idle`;
-- orologio: `anim@random@shop_clothes@watches / intro` e `/ outro`;
-- braccialetto: `anim@random@shop_clothes@watches / idle_b` e `/ idle_d`;
-- maschera: `mp_masks@on_foot / put_on_mask` e `misscommon@std_take_off_masks / take_off_mask_ps`;
-- maglia, canottiera e decalcomania: varianti `a`, `b`, `c` di `clothingshirt`
+- watch: `anim@random@shop_clothes@watches / intro` and `/ outro`;
+- bracelet: `anim@random@shop_clothes@watches / idle_b` and `/ idle_d`;
+- mask: `mp_masks@on_foot / put_on_mask` and `misscommon@std_take_off_masks / take_off_mask_ps`;
+- shirt, tank top and decal: variants `a`, `b`, `c` of `clothingshirt`
   (`try_shirt_positive/negative_*`);
-- scarpe: `clothingshoes / try_shoes_positive_c` e `try_shoes_negative_c`;
-- **giubbotto** (id storico `armor`, label precedentemente «Corazza»): cambio giacca vero
-  `anim@scripted@avi4@ig1_outfit@male@ / change_a` (femmina `@heeled@ / change_a`) e `change_c` per
-  toglierlo; non è più lo spogliarsi completo `change_highroller*`;
-- zaino: `anim@heists@money_grab@duffel / enter_strap` e `exit_strap` ( strap-on / strap-off);
-- ripristino: `switch@franklin@getting_ready / 002334_02_fras_v2_11_getting_dressed_exit` (uomo) e
-  `change_highroller` (donna).
+- shoes: `clothingshoes / try_shoes_positive_c` and `try_shoes_negative_c`;
+- **jacket** (historical id `armor`, previously labelled "Corazza"): a real jacket change
+  `anim@scripted@avi4@ig1_outfit@male@ / change_a` (female `@heeled@ / change_a`), and `change_c` to
+  take it off; no longer the full undress `change_highroller*`;
+- bag: `anim@heists@money_grab@duffel / enter_strap` and `exit_strap` (strap-on / strap-off);
+- restore: `switch@franklin@getting_ready / 002334_02_fras_v2_11_getting_dressed_exit` (male) and
+  `change_highroller` (female).
 
-Le clip girano una sola volta: `duration = -1` con flag 48 (upper body + controllo) e nessun loop;
-il client pulisce la dict a `stopAt` e ferma solo una clip eventualmente ancora attiva. Il server
-invia `whip_clothingwheel:anim` con `takeoff`, `wear` o `restore` e lo slot solo dopo che il cambio è
-andato a buon fine. Disattivale tutte con `Config.Animate = false`, oppure modifica
-`Config.WearAnim`, `Config.RestoreAnim` e `Config.PickupAnim`.
+Clips play once: `duration = -1` with flag 48 (upper body + control) and no loop; the client cleans
+up the dict at `stopAt` and only stops a clip if one is still active. The server sends
+`whip_clothingwheel:anim` with `takeoff`, `wear` or `restore` and the slot only after the change has
+succeeded. Disable them all with `Config.Animate = false`, or edit `Config.WearAnim`,
+`Config.RestoreAnim` and `Config.PickupAnim`.
 
-### Slot inclusi
+### Included slots
 
-props: cappello, occhiali, orecchie, orologio, braccialetto.
-component: maschera, maglia, canottiera, scarpe, accessorio, giubbotto (`armor`), decalcomania, zaino.
+props: hat, glasses, ears, watch, bracelet.
+components: mask, shirt, tank top, shoes, accessory, jacket (`armor`), decal, bag.
 
-`arms` (maniche) e `legs` (pantaloni) restano in `config.lua` ma sono commentati: non compaiono
-nella ruota. Il **Ripristina** li tiene comunque d'occhio, perché WHIP li considera apparel. I
-capelli sono esclusi: WHIP li gestisce tramite `look.hair`, non come capo normale.
+`arms` (sleeves) and `legs` (trousers) remain in `config.lua` but are commented out: they do not
+appear in the wheel. **Restore** still keeps an eye on them, because WHIP treats them as apparel.
+Hair is excluded: WHIP handles it through `look.hair`, not as a normal garment.
 
-## Perdita del capo (solo "Indossa", nessun item)
+## Losing a garment (wear only, no item)
 
-### Export server-side
+### Server-side export
 
 ```lua
 exports.whip_clothingwheel:LoseItem(source, slotId, coords)
--- source:  source del giocatore
+-- source:  the player's source
 -- slotId:  'hat', 'glasses', 'ear', 'watch', 'bracelet',
 --          'mask', 'tops', 'undershirt', 'arms', 'legs', 'shoes',
 --          'accessory', 'armor', 'decal', 'bag'
--- coords:  opzionale; vector3/vector4. Se omesso, usa la posizione del giocatore.
--- returns: true | false, motivo
+-- coords:  optional; vector3/vector4. Defaults to the player's position.
+-- returns: true | false, reason
 ```
 
-Esempio:
+Example:
 
 ```lua
 exports.whip_clothingwheel:LoseItem(source, 'hat')
 ```
 
-### Evento client → server
+### Client → server event
 
 ```lua
 TriggerServerEvent('whip_clothingwheel:lose', 'hat')
 ```
 
-È protetto da `SecureEvent` (rate limit + enum dello slot): non accetta valori arbitrari.
+It is protected by `SecureEvent` (rate limit + slot enum): arbitrary values are rejected.
 
-### Comandi dev
+### Dev commands
 
-Richiedono il permesso ACE `whip.devtools`:
+Require the ACE permission `whip.devtools`:
 
-- `/cwlose <slot>` — fa cadere un capo.
-- `/cwmodel [slot]` — stampa, per i capi indossati, `drawable`, `texture` e il modello che verrebbe
-  usato a terra. Serve a riempire `Config.DropModels`.
+- `/cwlose <slot>` — drops a garment.
+- `/cwmodel [slot]` — prints, for worn garments, `drawable`, `texture` and the model that would be
+  used on the ground. Used to fill in `Config.DropModels`.
 
-### Cosa succede
+### What happens
 
-Ogni capo perso diventa un **prop del mondo**. Sul prop compare **un solo prompt: «Indossa <capo>»**
-con la **freccia di raccolta vera di WHIP** (`icon = 'pickup'`): non più la scritta «cap», perché
-`icon` accetta un glifo del core, non una chiave SVG del nostro sottomenu.
+Every lost garment becomes a **world prop**. The prop shows **a single prompt: "Wear <garment>"**
+with **WHIP's real pickup arrow** (`icon = 'pickup'`): no more "cap" text, because `icon` accepts a
+core glyph, not an SVG key from our submenu.
 
-- Non esiste il «Pick up» come azione, non esiste un ground item WHIP, non esiste un item
-  nell'inventario. L'icona dice solo che il capo si raccoglie; l'azione è «Indossa».
-- Selezionando «Indossa» il server controlla che il drop esista e che il giocatore sia entro
-  `Config.WearReach` metri, poi riapplica il capo al ped e pulisce il drop.
-- Parte il **grab vero di WHIP** (`anim@scripted@player@freemode@gen_grab@male@` o `@heeled@`),
-  lo stesso usato da `whip_core/client/ground.lua`. La clip è scelta in base all'altezza del capo e
-  al lato rispetto al ped (`low_rh`, `low_lh`, `low_2h`; due mani per zaino e giubbotto). Il prop
-  sparisce **1 secondo dopo l'avvio dell'azione** (`Config.PickupAnim.removeAt = 1000`), quando la
-  mano è già chiusa. Sono previsti i guard per morto, veicolo, ragdoll, caduta e nuoto.
-- Subito dopo (`Config.PickupAnim.wearAfterGrab = 150` ms) parte l'**animazione specifica del capo
-  indossato**: il grab e il "mettere" non si sovrappongono.
-- Finché il capo è a terra la sua slice nel sottomenu resta disabilitata e il suo riflesso bianco
-  viene spento.
+- There is no "Pick up" action, no WHIP ground item and no inventory item. The icon only says the
+  garment can be collected; the action is "Wear".
+- Selecting "Wear" makes the server check that the drop exists and the player is within
+  `Config.WearReach` meters, then re-applies the garment to the ped and clears the drop.
+- WHIP's **real grab** plays (`anim@scripted@player@freemode@gen_grab@male@` or `@heeled@`), the same
+  one used by `whip_core/client/ground.lua`. The clip is chosen by the garment's height and side
+  relative to the ped (`low_rh`, `low_lh`, `low_2h`; two hands for bag and jacket). The prop
+  disappears **1 second after the action starts** (`Config.PickupAnim.removeAt = 1000`), when the
+  hand is already closed. There are guards for dead, in vehicle, ragdoll, falling and swimming.
+- Right after (`Config.PickupAnim.wearAfterGrab = 150` ms) the **garment-specific animation** plays:
+  the grab and the "put on" do not overlap.
+- While the garment is on the ground, its slice in the submenu stays disabled and its white glow is
+  turned off.
 
-### Modello del capo a terra = capo indossato
+### Ground model = worn garment
 
-GTA V **non espone una native** per sapere il modello world del drawable che il ped indossa:
-`GET_PED_PROP_MODEL` non esiste e `GetPedPropCollectionName` restituisce solo il nome della
-collection (per esempio `female_freemode_beach`), non un modello di oggetto. Per questo la
-corrispondenza esatta si configura:
+GTA V **does not expose a native** to get the world model of the drawable a ped wears:
+`GET_PED_PROP_MODEL` does not exist and `GetPedPropCollectionName` returns only the collection name
+(for example `female_freemode_beach`), not an object model. The exact mapping is therefore
+configured:
 
 ```lua
 -- config.lua
 Config.DropModels = {
     hat = {
-        ['7'] = 'prop_cap_01',        -- drawable 7 = quel cappello
+        ['7'] = 'prop_cap_01',        -- drawable 7 = that hat
         ['12'] = 'prop_busker_hat_01',
     },
 }
 ```
 
-La chiave è il **drawable indossato al momento della perdita**. Il modello risolto viene salvato nei
-metadata insieme al drop, quindi vale anche dopo un restart. Se non c'è una voce, si usa il modello
-generico `Config.Slots[].model`: per il cappello è `prop_cap_01`, quindi un **berretto**, non un
-cappello da cowboy. Per avere il modello esatto del capo che indossi, aggiungi la voce con il
-drawable mostrato da `/cwmodel hat`.
+The key is the **drawable worn at the moment of the loss**. The resolved model is saved in the
+metadata with the drop, so it survives a restart. If there is no entry, the generic
+`Config.Slots[].model` is used: for the hat that is `prop_cap_01`, a **cap**, not a cowboy hat. To get
+the exact model of the hat you are wearing, add an entry with the drawable shown by `/cwmodel hat`.
 
-### Modelli base
+### Base models
 
-I modelli generici di `Config.Slots[].model` sono stati scelti tra quelli reali del catalogo WHIP:
-`prop_cap_01` (berretto), `prop_aviators_01`, `prop_ear_defenders_01`,
-`sf_prop_sf_watch_01a`, `h4_prop_h4_bracelet_01a`, `prop_mask_fireman`, `prop_ld_tshirt_01`,
-`prop_folded_polo_shirt`, `prop_ld_shoe_02`, `h4_prop_h4_necklace_01a`, `prop_bodyarmour_02`,
-`prop_cs_tshirt_ball_01` e `bkr_prop_duffel_bag_01a`. La tabella `DropModels` ha sempre la
-precedenza quando conosci il drawable esatto.
+The generic `Config.Slots[].model` values were chosen from real WHIP catalog models:
+`prop_cap_01` (cap), `prop_aviators_01`, `prop_ear_defenders_01`, `sf_prop_sf_watch_01a`,
+`h4_prop_h4_bracelet_01a`, `prop_mask_fireman`, `prop_ld_tshirt_01`, `prop_folded_polo_shirt`,
+`prop_ld_shoe_02`, `h4_prop_h4_necklace_01a`, `prop_bodyarmour_02`, `prop_cs_tshirt_ball_01` and
+`bkr_prop_duffel_bag_01a`. The `DropModels` table always takes precedence when you know the exact
+drawable.
 
-## Stato e persistenza
+## State and persistence
 
-- La baseline (aspetto originario) è salvata nei metadata del personaggio alla chiave
-  `clothingwheel_baseline` ed è una copia completa di `appearance`, non solo degli slot visibili.
-- `Ripristina` passa l'intera baseline a `SetPlayerAppearance(..., { only = { 'apparel', 'props' } })`:
-  vengono quindi ripristinati anche `arms`, `legs` e ogni altro slot apparel/props, non solo i capi
-  della ruota.
-- I drop tracciati (slot + coordinate + drawable/texture + modello) sono salvati alla chiave
-  `clothingwheel_drops`, quindi sopravvivono a un restart della risorsa: al login i prop vengono
-  ricreati.
-- Dopo `Ripristina` la baseline viene rimossa e i drop vengono cancellati.
+- The baseline (original appearance) is saved in the character metadata under
+  `clothingwheel_baseline` and is a full copy of `appearance`, not just the visible slots.
+- **Restore** passes the entire baseline to `SetPlayerAppearance(..., { only = { 'apparel', 'props' } })`:
+  this restores `arms`, `legs` and every other apparel/props slot, not only the garments in the wheel.
+- Tracked drops (slot + coordinates + drawable/texture + model) are saved under `clothingwheel_drops`,
+  so they survive a resource restart: the props are recreated at login.
+- After **Restore** the baseline is removed and drops are cleared.
 
 ## NUI
 
-| File | Ruolo |
+| File | Role |
 | --- | --- |
-| `html/index.html` | Struttura del sottomenu (alone, slice SVG, disco, pill Indietro) |
-| `html/style.css` | Copia degli stili della ruota rapida WHIP: slab, beam, disco, pill, font Barlow, riflesso dei capi tolti |
-| `html/app.js` | Iconify SVG locali, geometria esatta WHIP, mira angolare, refill solo al cambio slice, latch, click, click destro, Esc |
-| `client/nui.lua` | `SendNUIMessage` con stringhe tradotte, `SetNuiFocus`, `SetCursorLocation`, callback `select` / `back` / `close` |
+| `html/index.html` | Submenu structure (glow, SVG slices, disc, Back pill) |
+| `html/style.css` | Copy of WHIP quick wheel styles: slabs, beam, disc, pill, Barlow font, removed-garment glow |
+| `html/app.js` | Local Iconify SVGs, exact WHIP geometry, angular aiming, refill only on slice change, latch, click, right-click, Esc |
+| `client/nui.lua` | `SendNUIMessage` with translated strings, `SetNuiFocus`, `SetCursorLocation`, `select` / `back` / `close` callbacks |
 
-Il pulsante **Vestiti** della ruota F1 apre la pagina; `whip_clothingwheel:state` aggiorna il
-sottomenu aperto dopo ogni cambio confermato dal server.
+The **Clothes** button on the F1 wheel opens the page; `whip_clothingwheel:state` updates the open
+submenu after every change confirmed by the server.
 
-## Eventi
+## Events
 
-| Nome | Direzione | Uso |
+| Name | Direction | Use |
 | --- | --- | --- |
-| `whip_clothingwheel:state` | server → client | Stato aggiornato + valori da applicare |
-| `whip_clothingwheel:apply` | server → client | Solo valori da applicare ai natives |
-| `whip_clothingwheel:anim` | server → client | Animazione `takeoff` / `wear` / `restore` + slot dopo il cambio confermato |
-| `whip_clothingwheel:drop:spawn` | server → client | Crea prop + prompt «Indossa» (glifo `pickup`) per un capo caduto |
-| `whip_clothingwheel:pickup` | server → client | Coordinate + slot del drop: avvia l'animazione e rimuove il prop a mano chiusa |
-| `whip_clothingwheel:drop:remove` | server → client | Rimuove prop + prompt di uno slot |
-| `whip_clothingwheel:drop:removeAll` | server → client | Rimuove tutti i prop + prompt |
-| `whip_clothingwheel:state` | SecureCallback | Client chiede stato e valori correnti |
-| `whip_clothingwheel:toggle` | SecureEvent | Metti/togli uno slot |
-| `whip_clothingwheel:restore` | SecureEvent | Ripristino completo di apparel + props |
-| `whip_clothingwheel:lose` | SecureEvent | Perdita di uno slot |
-| `whip_clothingwheel:wearGround` | SecureEvent | Indossa un capo caduto (distanza verificata) |
-| `whip_clothingwheel:drops:sync` | SecureEvent | Il client chiede di ricreare i drop dai metadata (dopo un restart) |
+| `whip_clothingwheel:state` | server → client | Updated state + values to apply |
+| `whip_clothingwheel:apply` | server → client | Only values to apply to natives |
+| `whip_clothingwheel:anim` | server → client | `takeoff` / `wear` / `restore` animation + slot after a confirmed change |
+| `whip_clothingwheel:drop:spawn` | server → client | Creates prop + "Wear" prompt (`pickup` glyph) for a dropped garment |
+| `whip_clothingwheel:pickup` | server → client | Drop coordinates + slot: starts the animation and removes the prop when the hand closes |
+| `whip_clothingwheel:drop:remove` | server → client | Removes prop + prompt for one slot |
+| `whip_clothingwheel:drop:removeAll` | server → client | Removes all props + prompts |
+| `whip_clothingwheel:state` | SecureCallback | Client requests state and current values |
+| `whip_clothingwheel:toggle` | SecureEvent | Put on / take off a slot |
+| `whip_clothingwheel:restore` | SecureEvent | Full restore of apparel + props |
+| `whip_clothingwheel:lose` | SecureEvent | Drop a slot |
+| `whip_clothingwheel:wearGround` | SecureEvent | Wear a dropped garment (distance checked) |
+| `whip_clothingwheel:drops:sync` | SecureEvent | Client asks to recreate drops from metadata (after a restart) |
 
-## Configurazione
+## Configuration
 
-`config.lua` contiene `Locale` e `Locales` (5 lingue), chiavi metadata, rate limit,
-notifiche/animazioni, `WearReach`, `ClearDropsOnRestore`, `MenuIcon`, la mappa `DropModels`
-(drawable → modello del capo a terra), `WearAnim` (clip diversa per capo e per mettere/togliere),
-`RestoreAnim`, `PickupAnim` (grab WHIP, `removeAt = 1000`) e i slot visibili con modello prop e
-chiave icona SVG. `arms` e `legs` sono commentati e non appaiono nella ruota, ma il ripristino li
-include comunque.
+`config.lua` contains `Locale` and `Locales` (5 languages), metadata keys, rate limit,
+notifications/animations, `WearReach`, `ClearDropsOnRestore`, `MenuIcon`, the `DropModels` map
+(drawable → ground garment model), `WearAnim` (a different clip per garment and for put on/take off),
+`RestoreAnim`, `PickupAnim` (WHIP grab, `removeAt = 1000`) and the visible slots with their prop
+model and SVG icon key. `arms` and `legs` are commented out and do not appear in the wheel, but
+restore still includes them.
