@@ -38,6 +38,20 @@ end
 -- Animazioni: il server manda 'takeoff', 'wear' o 'restore' + lo slot, così la
 -- clip cambia da capo a capo e tra "mettere" e "togliere".
 local FEMALE_MODEL = GetHashKey('mp_f_freemode_01')
+local activeReverse = {} -- [slotId] = token, per non sovrapporre due "rimetti"
+
+local function loadDict(dict)
+    if not dict then return false end
+    if HasAnimDictLoaded(dict) then return true end
+    RequestAnimDict(dict)
+    local timeout = GetGameTimer() + 1500
+    while not HasAnimDictLoaded(dict) and GetGameTimer() < timeout do Wait(0) end
+    return HasAnimDictLoaded(dict)
+end
+
+local function stopAnim(ped, dict, name)
+    if DoesEntityExist(ped) then StopAnimTask(ped, dict, name, -8.0) end
+end
 
 local function playAnim(spec)
     if Config.Animate == false or type(spec) ~= 'table' then return end
@@ -45,12 +59,7 @@ local function playAnim(spec)
     if not ped or ped == 0 or IsPedDeadOrDying(ped, true) then return end
 
     local dict, name = spec.dict, spec.anim
-    if not dict or not name then return end
-
-    RequestAnimDict(dict)
-    local timeout = GetGameTimer() + 1500
-    while not HasAnimDictLoaded(dict) and GetGameTimer() < timeout do Wait(0) end
-    if not HasAnimDictLoaded(dict) then return end
+    if not dict or not name or not loadDict(dict) then return end
 
     -- Stesso schema delle emote WHIP: blend-in 8, blend-out -8, durata naturale.
     -- Nessun loop: a fine clip il ped torna da solo alla posa normale.
@@ -63,6 +72,81 @@ local function playAnim(spec)
         end
     end)
     SetTimeout((tonumber(spec.stopAt) or 2000) + 600, function() RemoveAnimDict(dict) end)
+end
+
+-- GTA non ha un flag "reverse" per TASK_PLAY_ANIM e una velocità negativa non è
+-- documentata. Per "rimettere" usiamo la stessa clip di "togliere" ma ne
+-- scorriamo la fase da 1 a 0 con SET_ENTITY_ANIM_CURRENT_TIME: è deterministico
+-- e non dipende da speed negativi non supportati.
+local function playReverseAnim(spec, slotId)
+    if Config.Animate == false or type(spec) ~= 'table' then return end
+    local ped = PlayerPedId()
+    if not ped or ped == 0 or IsPedDeadOrDying(ped, true) then return end
+
+    local dict, name = spec.dict, spec.anim
+    if not dict or not name or not loadDict(dict) then return end
+
+    local duration = tonumber(GetAnimDuration(dict, name)) or 0
+    local total = duration * 1000
+    if total < 200 then total = tonumber(spec.stopAt) or 1500 end
+
+    local token = {}
+    if slotId then activeReverse[slotId] = token end
+
+    -- L'oggetto indossato non fa parte della clip: la visibilità va gestita qui.
+    -- Lo togliamo all'inizio e lo rimettiamo quando la mano torna al viso.
+    local savedProp
+    local slotCfg = slotId and ClothingWheel.get(slotId) or nil
+    local info = slotId and State.slots and State.slots[slotId] or nil
+    if slotCfg and slotCfg.kind == 'prop' and info and info.worn then
+        local drawable = tonumber(info.drawable) or -1
+        if drawable >= 0 then
+            savedProp = {
+                slot = slotCfg.slot,
+                drawable = drawable,
+                texture = math.max(tonumber(info.texture) or 0, 0),
+            }
+            ClearPedProp(ped, savedProp.slot)
+        end
+    end
+
+    local flag = tonumber(spec.flag) or 0
+    -- AF_HOLD_LAST_FRAME (2): senza questo la clip a phase 1.0 finisce subito.
+    if (math.floor(flag / 2) % 2) == 0 then flag = flag + 2 end
+
+    TaskPlayAnim(ped, dict, name, 8.0, -8.0, -1, flag, 1.0, false, false, false)
+    Wait(30) -- il task deve registrare l'anim prima dello scrub
+    SetEntityAnimSpeed(ped, dict, name, 0.0)
+    SetEntityAnimCurrentTime(ped, dict, name, 1.0)
+
+    local started = GetGameTimer()
+    local revealAt = tonumber(spec.revealAt) or 0.62
+    local revealed = false
+
+    while GetGameTimer() - started < total do
+        if slotId and activeReverse[slotId] ~= token then break end
+        if not DoesEntityExist(ped) or IsPedDeadOrDying(ped, true) then break end
+
+        local t = math.min((GetGameTimer() - started) / total, 1.0)
+        SetEntityAnimCurrentTime(ped, dict, name, 1.0 - t)
+
+        if savedProp and not revealed and t >= revealAt then
+            SetPedPropIndex(ped, savedProp.slot, savedProp.drawable, savedProp.texture, true)
+            revealed = true
+        end
+        Wait(0)
+    end
+
+    if savedProp and not revealed then
+        SetPedPropIndex(ped, savedProp.slot, savedProp.drawable, savedProp.texture, true)
+    end
+
+    local current = (not slotId) or (activeReverse[slotId] == token)
+    if current then
+        SetEntityAnimSpeed(ped, dict, name, 0.0)
+        stopAnim(ped, dict, name)
+        if slotId then activeReverse[slotId] = nil end
+    end
 end
 
 -- GetPedModel non esiste: il modello dell'entita' si legge con GetEntityModel.
@@ -98,7 +182,12 @@ local function animFor(kind, slotId)
 end
 
 RegisterNetEvent('whip_clothingwheel:anim', function(kind, slotId)
-    playAnim(animFor(kind, slotId))
+    local spec = animFor(kind, slotId)
+    if spec and spec.reverse then
+        playReverseAnim(spec, slotId)
+    else
+        playAnim(spec)
+    end
 end)
 
 -- ============================================
@@ -266,8 +355,16 @@ local function spawnDrop(id, model, coords, entry)
     SetModelAsNoLongerNeeded(hash)
     if not obj or obj == 0 then return end
 
-    SetEntityHeading(obj, tonumber(coords.heading) or 0.0)
+    SetEntityHeading(obj, tonumber(coords.heading) or (entry and tonumber(entry.heading)) or 0.0)
     PlaceObjectOnGroundProperly(obj)
+
+    -- Alcuni modelli (gli occhiali) hanno l'origine nel mezzo: senza questo
+    -- sollevamento restano mezzi interrati. I valori sono in Config.DropLift.
+    local lift = (type(Config.DropLift) == 'table') and tonumber(Config.DropLift[id]) or 0.0
+    if lift and lift ~= 0.0 then
+        local p = GetEntityCoords(obj)
+        SetEntityCoords(obj, p.x, p.y, p.z + lift, false, false, false, true)
+    end
 
     -- Prompt sul prop: unica azione e' "Indossa". Nessun pickup/inventario.
     -- `icon` e' un GLIFO WHIP, non una chiave SVG: s.icon (hat, glasses, ...) verrebbe

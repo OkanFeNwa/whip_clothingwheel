@@ -31,6 +31,47 @@ local function lower(text)
     return tostring(text):lower()
 end
 
+-- ============================================
+-- Prestito temporaneo dei capi tolti dalla ruota
+-- ============================================
+-- La baseline e' un'istantanea vecchia: se il giocatore ha cambiato look altrove,
+-- "rimetti" con la baseline rimette il capo sbagliato (o non lo rimette affatto).
+-- Quando un capo viene tolto qui salviamo il suo valore reale, e al successivo
+-- "rimetti" usiamo quello. I metadata sono serializzati come JSON: solo numeri.
+
+local function stashOf(source)
+    local value = Whip.core:GetPlayerMetadata(source, Config.StashKey)
+    return (type(value) == 'table') and value or {}
+end
+
+local function saveStash(source, stash)
+    Whip.core:SetPlayerMetadata(source, Config.StashKey, next(stash) and stash or nil)
+end
+
+function Appearance.stashEntry(source, id, entry)
+    local stash = stashOf(source)
+    stash[id] = { drawable = entry.drawable, texture = entry.texture }
+    saveStash(source, stash)
+end
+
+--- Legge e CONSUMA il capo prestato, solo dopo un commit riuscito.
+function Appearance.takeStash(source, id)
+    local stash = stashOf(source)
+    local entry = stash[id]
+    if not entry then return nil end
+    stash[id] = nil
+    saveStash(source, stash)
+    return ClothingWheel.validEntry(ClothingWheel.get(id), entry)
+end
+
+function Appearance.peekStash(source, id)
+    return ClothingWheel.validEntry(ClothingWheel.get(id), stashOf(source)[id])
+end
+
+function Appearance.clearStash(source)
+    saveStash(source, {})
+end
+
 --- Copia dell'aspetto originario: creata al primo utilizzo, se non esiste gia'.
 function Appearance.baseline(source)
     local saved = Whip.core:GetPlayerMetadata(source, Config.BaselineKey)
@@ -64,7 +105,7 @@ function Appearance.snapshot(source)
 
         slots[s.id] = {
             worn      = not ClothingWheel.isOff(s, entry),
-            available = not ClothingWheel.isOff(s, born),
+            available = (not ClothingWheel.isOff(s, born)) or Appearance.peekStash(source, s.id) ~= nil,
             dropped   = drop and true or false,
             drawable  = entry.drawable,
             texture   = entry.texture,
@@ -116,11 +157,13 @@ function Appearance.toggle(source, id)
     local born  = ClothingWheel.entry(base, s)
     local nextEntry
 
-    if ClothingWheel.isOff(s, entry) then
-        if ClothingWheel.isOff(s, born) then
-            return fail('error.noOriginal', lower(name))
-        end
-        nextEntry = born
+    local takingOff = not ClothingWheel.isOff(s, entry)
+    if not takingOff then
+        -- Rimetti prima il capo che hai tolto tu; la baseline e' solo un ripiego
+        -- per i capi che indossavi quando e' stata creata.
+        nextEntry = Appearance.peekStash(source, id)
+        if not nextEntry and not ClothingWheel.isOff(s, born) then nextEntry = born end
+        if not nextEntry then return fail('error.noOriginal', lower(name)) end
     else
         nextEntry = { drawable = s.off, texture = 0 }
     end
@@ -131,7 +174,14 @@ function Appearance.toggle(source, id)
     local ok, err = commit(source, newLook)
     if not ok then return false, err end
 
-    if ClothingWheel.isOff(s, nextEntry) then
+    -- Aggiorna il prestito solo dopo che il nuovo look e' stato accettato dal core.
+    if takingOff then
+        Appearance.stashEntry(source, id, entry)
+    else
+        Appearance.takeStash(source, id)
+    end
+
+    if takingOff then
         notifyKind(source, 'info', 'notify.takenOff', name)
         if Config.Animate then TriggerClientEvent('whip_clothingwheel:anim', source, 'takeoff', s.id) end
     else
@@ -159,8 +209,10 @@ function Appearance.wear(source, id, itemEntry, fromGround)
     -- prop resta visibile finché la mano non si chiude. Il controllo qui sopra
     -- vieta solo di "rimettere" a distanza quando il capo è ancora a terra.
 
-    local entry = ClothingWheel.validEntry(s, itemEntry) or ClothingWheel.entry(base, s)
-    if ClothingWheel.isOff(s, entry) then
+    local entry = ClothingWheel.validEntry(s, itemEntry)
+        or Appearance.peekStash(source, id)
+        or ClothingWheel.validEntry(s, ClothingWheel.entry(base, s))
+    if not entry or ClothingWheel.isOff(s, entry) then
         return fail('error.invalidData', ClothingWheel.label(s))
     end
 
@@ -170,6 +222,8 @@ function Appearance.wear(source, id, itemEntry, fromGround)
     local ok, err = commit(source, newLook)
     if not ok then return false, err end
 
+    -- Capo rimesso: il prestito non serve piu'.
+    Appearance.takeStash(source, id)
     return true
 end
 
@@ -188,6 +242,7 @@ function Appearance.restore(source)
 
     if Config.ClearDropsOnRestore and Drops then Drops.ClearAll(source) end
     Whip.core:SetPlayerMetadata(source, Config.BaselineKey, nil)
+    Appearance.clearStash(source)
 
     Appearance.push(source)
     notifyKind(source, 'success', 'notify.restored')

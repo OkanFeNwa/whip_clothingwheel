@@ -275,6 +275,16 @@ Config.BaselineKey = 'clothingwheel_baseline'
 -- Chiave metadata dove tenere i capi a terra, per slot, con coordinate e dati del capo.
 Config.DropsKey = 'clothingwheel_drops'
 
+-- Chiave metadata del "prestito" temporaneo: quando togli un capo dalla ruota
+-- salviamo qui il drawable/texture REALI che indossavi, così ripremendo lo rimetti
+-- addosso esattamente com'era (la baseline può essere vecchia o avere lo slot vuoto).
+Config.StashKey = 'clothingwheel_stash'
+
+-- Piccolo sollevamento dopo PlaceObjectOnGroundProperly: alcuni modelli (gli
+-- occhiali soprattutto) hanno l'origine a meta' dell'oggetto e finiscono
+-- interrati. Valori in metri, per slot. 0.08 basta a farli stare senza esagerare.
+Config.DropLift = { glasses = 0.08 }
+
 -- Il restore ripristina l'aspetto e rimuove tutti i capi a terra tracciati.
 Config.ClearDropsOnRestore = true
 
@@ -294,8 +304,23 @@ local function cloth(dict, anim, stopAt)
         dict = dict,
         anim = anim,
         duration = -1,
-        flag = 48, -- 16 upper body + 32 controllo
+        flag = 48, -- 16 upper body + 32 secondary
         stopAt = stopAt or 2000,
+    }
+end
+
+-- Usa la STESSA clip di "togliere" ma la fa scorrere al contrario.
+-- `revealAt` è la frazione della clip in cui il capo riappare sul ped:
+-- il client gestisce lui la visibilità, perché la clip non sa nulla degli item.
+local function reversed(spec, revealAt)
+    return {
+        dict = spec.dict,
+        anim = spec.anim,
+        duration = spec.duration,
+        flag = spec.flag,
+        stopAt = spec.stopAt,
+        reverse = true,
+        revealAt = revealAt or 0.62,
     }
 end
 
@@ -308,12 +333,13 @@ local changeFemale = cloth('anim@scripted@ulp_missions@change_clothes@female@', 
 local hatOn      = cloth('missheistdockssetup1hardhat@', 'put_on_hat', 1800)
 local hatOff     = cloth('veh@common@fp_helmet@',        'take_off_helmet_stand', 1700)
 
--- Occhiali: vere clip da negozio (non una "reaction" positiva/negativa).
-local glassesOn  = cloth('clothingspecs', 'put_on',   1600)
+-- Occhiali: la clip `take_off` è perfetta, quindi "mettere" è la stessa clip
+-- riprodotta al contrario (gestita dal client con lo scrub della fase).
+local glassesOn  = reversed(cloth('clothingspecs', 'take_off', 1600), 0.58)
 local glassesOff = cloth('clothingspecs', 'take_off', 1600)
 
--- Orecchie: gesto verso le orecchie + clip specifica delle cuffie antirumore.
-local earOn      = cloth('veh@common@fp_helmet@', 'put_on_helmet',             1700)
+-- Orecchie: stessa cosa, usiamo al contrario la clip delle cuffie antirumore.
+local earOn      = reversed(cloth('mini@ears_defenders', 'takeoff_earsdefenders_idle', 1700), 0.65)
 local earOff     = cloth('mini@ears_defenders',   'takeoff_earsdefenders_idle', 1700)
 
 -- Orologio: unico set specifico per orologi, transizioni intro/outro.
@@ -355,9 +381,13 @@ local jacketOff  = {
     female = cloth('anim@scripted@avi4@ig1_outfit@heeled@', 'change_c', 2200),
 }
 
--- Zaino: le clip vere di strap-on / strap-off del duffel bag.
-local bagOn      = cloth('anim@heists@money_grab@duffel', 'enter_strap', 1800)
-local bagOff     = cloth('anim@heists@money_grab@duffel', 'exit_strap',  1800)
+-- Zaino: `enter_strap` / `exit_strap` esistono davvero, ma sono clip di scena
+-- sincronizzata con cinturino e borsa: con il flag "solo upper body" non si
+-- vedevano. Qui le suoniamo a corpo intero (flag 0), senza creare gli oggetti
+-- della scena: resta il gesto di mettersi/si togliere lo zaino.
+local bagOn      = cloth('anim@heists@money_grab@duffel', 'enter_strap', 2200)
+local bagOff     = cloth('anim@heists@money_grab@duffel', 'exit_strap',  2200)
+bagOn.flag, bagOff.flag = 0, 0
 
 Config.WearAnim = {
     hat        = { on = hatOn,      off = hatOff },

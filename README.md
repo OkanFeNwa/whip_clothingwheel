@@ -227,6 +227,9 @@ drawable.
 
 - The baseline (original appearance) is saved in the character metadata under
   `clothingwheel_baseline` and is a full copy of `appearance`, not just the visible slots.
+- When you take a garment off from the wheel, its **exact** `drawable`/`texture` is saved under
+  `clothingwheel_stash`. Pressing the slice again re-wears that saved value, even if the baseline is
+  old or had the slot empty. **Restore** clears the stash too.
 - **Restore** passes the entire baseline to `SetPlayerAppearance(..., { only = { 'apparel', 'props' } })`:
   this restores `arms`, `legs` and every other apparel/props slot, not only the garments in the wheel.
 - Tracked drops (slot + coordinates + drawable/texture + model) are saved under `clothingwheel_drops`,
@@ -265,9 +268,12 @@ submenu after every change confirmed by the server.
 
 ## Configuration
 
-`config.lua` contains `Locale` and `Locales` (5 languages), metadata keys, rate limit,
+`config.lua` contains `Locale` and `Locales` (5 languages), metadata keys (`BaselineKey`, `DropsKey`,
+`StashKey`), `DropLift` (small per-slot ground offset; glasses use `0.08`), rate limit,
 notifications/animations, `WearReach`, `ClearDropsOnRestore`, `MenuIcon`, the `DropModels` map
-(drawable → ground garment model), `WearAnim` (a different clip per garment and for put on/take off),
+(drawable → ground garment model), `WearAnim` (a different clip per garment and for put on/take off).
+Glasses and ears use `reverse = true` specs: the client plays the same take-off clip backwards by
+scrubbing `SET_ENTITY_ANIM_CURRENT_TIME` from 1 to 0, and reveals the prop at `revealAt`.
 `RestoreAnim`, `PickupAnim` (WHIP grab, `removeAt = 1000`) and the visible slots with their prop
-model and SVG icon key. `arms` and `legs` are commented out and do not appear in the wheel, but
-restore still includes them.
+model and SVG icon key are also configurable. `arms` and `legs` are commented out and do not appear
+in the wheel, but restore still includes them.

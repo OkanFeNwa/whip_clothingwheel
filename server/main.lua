@@ -85,7 +85,7 @@ RegisterCommand('cwlose', function(source, args)
         return
     end
     if not IsPlayerAceAllowed(source, 'whip.devtools') then
-        notify(source, ClothingWheel.locale('error.noPermission'), 'error')
+        notify(source, ClothingWheel.locale('notify.noPermission'), 'error')
         return
     end
 
@@ -109,7 +109,7 @@ RegisterCommand('cwmodel', function(source, args)
         return
     end
     if not IsPlayerAceAllowed(source, 'whip.devtools') then
-        notify(source, ClothingWheel.locale('error.noPermission'), 'error')
+        notify(source, ClothingWheel.locale('notify.noPermission'), 'error')
         return
     end
 

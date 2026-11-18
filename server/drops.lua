@@ -126,6 +126,10 @@ function Drops.Lose(source, id, coords)
         return false, err
     end
 
+    -- Il capo e' caduto: teniamone comunque una copia nel prestito, così se il
+    -- drop viene perso (restart, cleanup) la ruota può ancora rimetterlo addosso.
+    Appearance.stashEntry(source, id, entry)
+
     TriggerClientEvent('whip_clothingwheel:drop:spawn', source, id, model,
         vector3(x, y, z), tracked[source][id])
 
