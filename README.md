@@ -215,6 +215,47 @@ metadata with the drop, so it survives a restart. If there is no entry, the gene
 `Config.Slots[].model` is used: for the hat that is `prop_cap_01`, a **cap**, not a cowboy hat. To get
 the exact model of the hat you are wearing, add an entry with the drawable shown by `/cwmodel hat`.
 
+### Generating exact models from GTA V
+
+`tools/model_forge/` contains a CLI that extracts the real clothing geometry from GTA V Legacy RPFs
+and writes FiveM-streamable `.ydr` + `.ytd` pairs. It can also update `Config.DropModels` for you:
+
+```powershell
+cd tools\model_forge
+.\.venv\Scripts\python.exe forge.py --reindex
+.\.venv\Scripts\python.exe forge.py --list --slot hat
+.\.venv\Scripts\python.exe forge.py --slot hat --drawable 12 --texture 0 --resource ..\..
+```
+
+See `tools/model_forge/README.md` for the full toolchain (Blender 5.3, Sollumz 2.9.1, szio, PyMateria)
+and all options. Generated models are named `cw_*` and need `refresh` + `restart whip_clothingwheel`.
+
+Instead of editing `Config.DropModels` by hand, generated models can be registered in
+`data/drop_models.json`:
+
+```powershell
+cd tools\model_forge
+.\.venv\Scripts\python.exe register_models.py --from .\stream --resource ..\..
+```
+
+Then run `/cwmodel reload` in game (requires `whip.devtools`). Resolution order is
+`Config.DropModels` → `data/drop_models.json` → `Config.Slots[].model`, and the client
+falls back to the generic slot prop if a generated model is missing from `stream/`.
+
+The registry is keyed by slot, drawable, ped sex and texture, so male and female
+hats (which use different drawable ranges) resolve independently. If models come
+from a dump with names like `male_p0_np_014_03.ydr`, bake the correct texture
+sampler before streaming them:
+
+```powershell
+cd tools\model_forge
+.\.venv\Scripts\python.exe fix_texture_refs.py --from E:\whip\output\models --out ..\..\stream
+.\.venv\Scripts\python.exe register_models.py --from ..\..\stream --resource ..\..
+```
+
+1462 generated hats/glasses are currently bundled in `stream/` and registered in
+`data/drop_models.json`.
+
 ### Base models
 
 The generic `Config.Slots[].model` values were chosen from real WHIP catalog models:

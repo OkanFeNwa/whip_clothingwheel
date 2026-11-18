@@ -26,9 +26,18 @@ function Drops.load(source)
         if s and type(d) == 'table' and tonumber(d.x) then
             -- I drop vecchi non hanno `model`: lo ricaviamo dal drawable salvato,
             -- così la mappa configurata vale anche dopo un aggiornamento.
-            local model = d.model or ClothingWheel.dropModel(s, { drawable = d.drawable })
+            -- texture e ped servono a scegliere la variante generata corretta.
+            local model = d.model
+            -- I drop salvati prima del registro generato hanno il prop generico:
+            -- in quel caso ricalcoliamo il modello, così il nuovo mapping vale
+            -- anche sui capi già a terra.
+            if not model or model == s.model then
+                model = ClothingWheel.dropModel(s, {
+                    drawable = d.drawable, texture = d.texture, ped = d.ped,
+                })
+            end
             TriggerClientEvent('whip_clothingwheel:drop:spawn', source, id, model,
-                vector3(d.x, d.y, d.z), d)
+                vector3(d.x, d.y, d.z), d, s.model)
         end
     end
 end
@@ -113,6 +122,7 @@ function Drops.Lose(source, id, coords)
         heading = tonumber(heading) or 0.0,
         drawable = entry.drawable,
         texture = entry.texture,
+        ped = look.model,
         model = model,
     }
     saveMeta(source, tracked[source])
@@ -131,7 +141,7 @@ function Drops.Lose(source, id, coords)
     Appearance.stashEntry(source, id, entry)
 
     TriggerClientEvent('whip_clothingwheel:drop:spawn', source, id, model,
-        vector3(x, y, z), tracked[source][id])
+        vector3(x, y, z), tracked[source][id], s.model)
 
     Appearance.push(source)
     notify(source, ClothingWheel.locale('notify.dropped', name), 'warning')

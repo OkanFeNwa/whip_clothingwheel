@@ -103,6 +103,7 @@ end, false)
 -- modello del capo a terra identico a quello che il personaggio sta portando.
 -- /cwmodel         -> stampa tutti i capi indossati
 -- /cwmodel hat     -> stampa solo quello slot
+-- /cwmodel reload  -> rilegge data/drop_models.json (modelli generati)
 RegisterCommand('cwmodel', function(source, args)
     if source == 0 then
         print('[whip_clothingwheel] ' .. ClothingWheel.locale('error.devOnly'))
@@ -113,13 +114,27 @@ RegisterCommand('cwmodel', function(source, args)
         return
     end
 
+    local only = args[1]
+
+    -- /cwmodel reload rilegge data/drop_models.json senza riavviare la resource.
+    -- Va prima del controllo di `appearance`: il registro si può ricaricare anche
+    -- quando il personaggio non è ancora completamente caricato.
+    if only == 'reload' then
+        if type(GeneratedDropModels) == 'table' and type(GeneratedDropModels.reload) == 'function' then
+            local count = GeneratedDropModels.reload()
+            notify(source, ClothingWheel.locale('command.reload', count), 'success')
+        else
+            notify(source, ClothingWheel.locale('command.reloadFailed'), 'error')
+        end
+        return
+    end
+
     local look = Whip.core:GetPlayerMetadata(source, 'appearance')
     if type(look) ~= 'table' then
         notify(source, ClothingWheel.locale('error.notLoaded'), 'error')
         return
     end
 
-    local only = args[1]
     if only and not ClothingWheel.get(only) then
         notify(source, ClothingWheel.locale('error.unknownSlot'), 'error')
         return
@@ -132,7 +147,12 @@ RegisterCommand('cwmodel', function(source, args)
             if not ClothingWheel.isOff(s, entry) then
                 found = found + 1
                 local model = ClothingWheel.dropModel(s, entry)
-                local hint = (model == s.model) and ClothingWheel.locale('command.generic') or ''
+                local hint = ''
+                if model == s.model then
+                    hint = ClothingWheel.locale('command.generic')
+                elseif ClothingWheel.hasGeneratedModel(s, entry) then
+                    hint = ' [generated]'
+                end
                 local msg = ClothingWheel.locale('command.modelLine',
                     s.id, entry.drawable, entry.texture, model, hint)
                 print('[whip_clothingwheel] ' .. msg)

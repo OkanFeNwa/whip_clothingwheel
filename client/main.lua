@@ -338,32 +338,72 @@ RegisterNetEvent('whip_clothingwheel:pickup', function(coords, id)
     playGrab(id, coords)
 end)
 
-local function spawnDrop(id, model, coords, entry)
+-- I .ydr di model_forge vengono registrati come modelli world dal .ytyp
+-- caricato via DLC_ITYP_REQUEST in fxmanifest.lua. IsModelInCdimage puo' dare
+-- falsi negativi per i modelli streamati: la prova reale e' RequestModel.
+local function spawnDrop(id, model, coords, entry, fallback)
     removeDrop(id)
 
     local s = ClothingWheel.get(id)
     if not s then return end
 
-    local hash = GetHashKey(model)
-    if not IsModelInCdimage(hash) then return end
-    RequestModel(hash)
-    local timeout = GetGameTimer() + 3000
-    while not HasModelLoaded(hash) and GetGameTimer() < timeout do Wait(0) end
-    if not HasModelLoaded(hash) then return end
+    -- I modelli generati da model_forge vivono in stream/. Non usare
+    -- IsModelInCdimage: per i modelli streamati da una risorsa puo' dare false
+    -- anche quando il file c'e'. La prova reale e' RequestModel + HasModelLoaded.
+    local function tryLoad(name, timeoutMs)
+        if type(name) ~= 'string' or name == '' then return nil end
+        local h = GetHashKey(name)
+        RequestModel(h)
+        local deadline = GetGameTimer() + (timeoutMs or 3000)
+        while not HasModelLoaded(h) and GetGameTimer() < deadline do Wait(0) end
+        if HasModelLoaded(h) then return h end
+        -- Non chiamare SetModelAsNoLongerNeeded su un modello mai caricato:
+        -- puo' lasciare lo streamer in uno stato strano e far fallire il fallback.
+        return nil
+    end
 
-    local obj = CreateObject(hash, coords.x, coords.y, coords.z, false, false, false)
-    SetModelAsNoLongerNeeded(hash)
-    if not obj or obj == 0 then return end
+    local hash = tryLoad(model, 4000)
+    local obj
 
-    SetEntityHeading(obj, tonumber(coords.heading) or (entry and tonumber(entry.heading)) or 0.0)
-    PlaceObjectOnGroundProperly(obj)
+    if hash then
+        obj = CreateObject(hash, coords.x, coords.y, coords.z, false, false, false)
+        SetModelAsNoLongerNeeded(hash)
+        if obj and obj ~= 0 then
+            SetEntityHeading(obj, tonumber(coords.heading) or (entry and tonumber(entry.heading)) or 0.0)
+            PlaceObjectOnGroundProperly(obj)
 
-    -- Alcuni modelli (gli occhiali) hanno l'origine nel mezzo: senza questo
-    -- sollevamento restano mezzi interrati. I valori sono in Config.DropLift.
-    local lift = (type(Config.DropLift) == 'table') and tonumber(Config.DropLift[id]) or 0.0
-    if lift and lift ~= 0.0 then
-        local p = GetEntityCoords(obj)
-        SetEntityCoords(obj, p.x, p.y, p.z + lift, false, false, false, true)
+            -- Alcuni modelli (gli occhiali) hanno l'origine nel mezzo: senza questo
+            -- sollevamento restano mezzi interrati. I valori sono in Config.DropLift.
+            local lift = (type(Config.DropLift) == 'table') and tonumber(Config.DropLift[id]) or 0.0
+            if lift and lift ~= 0.0 then
+                local p = GetEntityCoords(obj)
+                SetEntityCoords(obj, p.x, p.y, p.z + lift, false, false, false, true)
+            end
+        else
+            obj = nil
+        end
+    end
+
+    if not obj and type(fallback) == 'string' and fallback ~= '' then
+        -- Ultima ratio: il prop generico dello slot, mai un ped invisibile.
+        hash = tryLoad(fallback, 3000)
+        if hash then
+            obj = CreateObject(hash, coords.x, coords.y, coords.z, false, false, false)
+            SetModelAsNoLongerNeeded(hash)
+            if obj and obj ~= 0 then
+                PlaceObjectOnGroundProperly(obj)
+                local p = GetEntityCoords(obj)
+                SetEntityCoords(obj, p.x, p.y, p.z + 0.1, false, false, false, true)
+            else
+                obj = nil
+            end
+        end
+    end
+
+    if not obj or obj == 0 then
+        print(('[whip_clothingwheel] nessun modello disponibile per %s (richiesto %s)')
+            :format(tostring(id), tostring(model)))
+        return
     end
 
     -- Prompt sul prop: unica azione e' "Indossa". Nessun pickup/inventario.
@@ -383,8 +423,8 @@ local function spawnDrop(id, model, coords, entry)
     dropProps[id] = { obj = obj, action = actionId }
 end
 
-RegisterNetEvent('whip_clothingwheel:drop:spawn', function(id, model, coords, entry)
-    spawnDrop(id, model, coords, entry)
+RegisterNetEvent('whip_clothingwheel:drop:spawn', function(id, model, coords, entry, fallback)
+    spawnDrop(id, model, coords, entry, fallback)
 end)
 
 RegisterNetEvent('whip_clothingwheel:drop:remove', function(id)

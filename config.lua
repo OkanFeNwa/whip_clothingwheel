@@ -56,7 +56,7 @@ Config.Locales = {
             devOnly = 'Questo comando può essere usato solo in gioco (o via export).',
             notOnGround = '%s non è a terra',
         },
-        command = { generic = ' [generico]', modelLine = '%s: drawable=%d texture=%d -> %s%s' },
+        command = { generic = ' [generico]', modelLine = '%s: drawable=%d texture=%d -> %s%s', reload = 'Modelli drop ricaricati: %d voci', reloadFailed = 'Registro modelli non disponibile' },
         -- Nessun blocco `slots`: in italiano valgono le label di Config.Slots.
     },
 
@@ -102,7 +102,7 @@ Config.Locales = {
             devOnly = 'This command can only be used in game (or through an export).',
             notOnGround = '%s is not on the ground',
         },
-        command = { generic = ' [default]', modelLine = '%s: drawable=%d texture=%d -> %s%s' },
+        command = { generic = ' [default]', modelLine = '%s: drawable=%d texture=%d -> %s%s', reload = 'Drop models reloaded: %d entries', reloadFailed = 'Model registry unavailable' },
         slots = {
             hat = 'Hat', glasses = 'Glasses', ear = 'Ears', watch = 'Watch',
             bracelet = 'Bracelet', mask = 'Mask', tops = 'Shirt',
@@ -154,7 +154,7 @@ Config.Locales = {
             devOnly = 'Este comando solo se puede usar en el juego (o mediante export).',
             notOnGround = '%s no está en el suelo',
         },
-        command = { generic = ' [genérico]', modelLine = '%s: drawable=%d texture=%d -> %s%s' },
+        command = { generic = ' [genérico]', modelLine = '%s: drawable=%d texture=%d -> %s%s', reload = 'Modelos de drop recargados: %d entradas', reloadFailed = 'Registro de modelos no disponible' },
         slots = {
             hat = 'Sombrero', glasses = 'Gafas', ear = 'Orejas', watch = 'Reloj',
             bracelet = 'Pulsera', mask = 'Máscara', tops = 'Camiseta',
@@ -206,7 +206,7 @@ Config.Locales = {
             devOnly = 'Cette commande ne peut être utilisée qu’en jeu (ou via export).',
             notOnGround = '%s n’est pas au sol',
         },
-        command = { generic = ' [générique]', modelLine = '%s: drawable=%d texture=%d -> %s%s' },
+        command = { generic = ' [générique]', modelLine = '%s: drawable=%d texture=%d -> %s%s', reload = 'Modèles de drop rechargés : %d entrées', reloadFailed = 'Registre des modèles indisponible' },
         slots = {
             hat = 'Chapeau', glasses = 'Lunettes', ear = 'Oreilles', watch = 'Montre',
             bracelet = 'Bracelet', mask = 'Masque', tops = 'T-shirt',
@@ -258,7 +258,7 @@ Config.Locales = {
             devOnly = 'Dieser Befehl kann nur im Spiel (oder über Export) verwendet werden.',
             notOnGround = '%s liegt nicht auf dem Boden',
         },
-        command = { generic = ' [Standard]', modelLine = '%s: drawable=%d texture=%d -> %s%s' },
+        command = { generic = ' [Standard]', modelLine = '%s: drawable=%d texture=%d -> %s%s', reload = 'Drop-Modelle neu geladen: %d Einträge', reloadFailed = 'Modellregister nicht verfügbar' },
         slots = {
             hat = 'Hut', glasses = 'Brille', ear = 'Ohren', watch = 'Uhr',
             bracelet = 'Armband', mask = 'Maske', tops = 'Shirt',

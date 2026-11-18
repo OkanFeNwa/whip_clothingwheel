@@ -81,15 +81,18 @@ function ClothingWheel.get(id)
 end
 
 --- Voce corrente di uno slot in un look.
----@return table { drawable = number, texture = number }
+--- `ped` è il modello del personaggio (appearance.model): serve a scegliere la
+--- variante maschile/femminile dei modelli generati.
+---@return table { drawable = number, texture = number, ped = string|nil }
 function ClothingWheel.entry(look, s)
-    if type(look) ~= 'table' then return { drawable = s.off, texture = 0 } end
+    if type(look) ~= 'table' then return { drawable = s.off, texture = 0, ped = nil } end
     local bag = (s.kind == 'prop') and look.props or look.components
     local raw = (type(bag) == 'table') and bag[tostring(s.slot)] or nil
-    if type(raw) ~= 'table' then return { drawable = s.off, texture = 0 } end
+    if type(raw) ~= 'table' then return { drawable = s.off, texture = 0, ped = look.model } end
     return {
         drawable = tonumber(raw.drawable) or s.off,
         texture  = tonumber(raw.texture) or 0,
+        ped      = look.model,
     }
 end
 
@@ -188,17 +191,44 @@ end
 --- Modello del prop che rappresenta il capo a terra.
 --- Non esiste una native che restituisca il modello world di un drawable indossato
 --- (GET_PED_PROP_MODEL non esiste; GetPedPropCollectionName dà solo la collection).
---- Per questo la corrispondenza esatta si configura in Config.DropModels[slot][drawable].
---- Se non c'è una voce, si usa il modello generico dello slot.
+--- Ordine di risoluzione:
+---   1. Config.DropModels[slot][drawable]  - override esplicito dell'admin
+---   2. data/drop_models.json[slot][drawable] - modelli generati da model_forge
+---   3. s.model                            - prop generico dello slot
 ---@return string model
 function ClothingWheel.dropModel(s, entry)
+    entry = type(entry) == 'table' and entry or {}
+    local drawable = tonumber(entry.drawable)
+    if not drawable or drawable < 0 then return s.model end
+    local key = math.floor(drawable)
+    local texture = tonumber(entry.texture) or 0
+
     local map = (type(Config.DropModels) == 'table') and Config.DropModels[s.id] or nil
-    local drawable = type(entry) == 'table' and tonumber(entry.drawable) or -1
-    if type(map) == 'table' and drawable and drawable >= 0 then
-        local model = map[tostring(math.floor(drawable))] or map[math.floor(drawable)]
+    if type(map) == 'table' then
+        local model = map[tostring(key)] or map[key]
         if type(model) == 'string' and model ~= '' then return model end
     end
+
+    -- Il registro generato è caricato solo lato server (server/generated_models.lua).
+    if type(GeneratedDropModels) == 'table' and type(GeneratedDropModels.get) == 'function' then
+        local generated = GeneratedDropModels.get(s.id, key, texture, entry.ped)
+        if type(generated) == 'string' and generated ~= '' then return generated end
+    end
+
     return s.model
+end
+
+--- Indica se il modello risolto è quello generato (utile per /cwmodel e i log).
+---@return boolean
+function ClothingWheel.hasGeneratedModel(s, entry)
+    if type(GeneratedDropModels) ~= 'table' or type(GeneratedDropModels.get) ~= 'function' then
+        return false
+    end
+    entry = type(entry) == 'table' and entry or {}
+    local drawable = tonumber(entry.drawable)
+    if not drawable or drawable < 0 then return false end
+    return GeneratedDropModels.get(s.id, math.floor(drawable),
+        tonumber(entry.texture) or 0, entry.ped) ~= nil
 end
 
 --- Dati validi per poter indossare un capo caduto a terra.

@@ -1,0 +1,6 @@
+# Generated caches / downloaded dependencies (never served to NUI)
+tools/model_forge/rpf_index.json
+tools/model_forge/Sollumz.zip
+tools/model_forge/.venv/
+tools/model_forge/__pycache__/
+*.pyc
