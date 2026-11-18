@@ -10,8 +10,15 @@ no CDN dependency. Logic stays server-side: the client only applies the values i
 
 ## Installation
 
-Put the resource in `resources/[custom]/whip_clothingwheel`. Your `server.cfg` already runs
-`ensure [custom]` after `whip_core`, so nothing else is needed.
+The resource can live in **any folder under `resources/`**: `resources/[custom]/whip_clothingwheel`,
+`resources/[local]/whip_clothingwheel`, `resources/whip_clothingwheel`, etc. The folder name is not
+hardcoded anywhere: the manifest only declares `dependency 'whip_core'` and loads
+`@whip_core/lib/satellite.lua`.
+
+Make sure `server.cfg` loads it **after `whip_core`**, either by `ensure`-ing the folder that contains
+it (for example `ensure [custom]`) or by adding an explicit `ensure whip_clothingwheel`. If your
+config already has `ensure [custom]` after `whip_core`, dropping it into `[custom]` needs no change;
+if you pick another folder, add the matching `ensure` line.
 
 - `dependency 'whip_core'` and `@whip_core/lib/satellite.lua` are already in the manifest.
 - No changes to `whip_core` are required.
@@ -19,9 +26,12 @@ Put the resource in `resources/[custom]/whip_clothingwheel`. Your `server.cfg` a
 Repository: https://github.com/OkanFeNwa/whip_clothingwheel
 
 ```bash
-cd resources/[custom]
+cd resources
 git clone https://github.com/OkanFeNwa/whip_clothingwheel.git
 ```
+
+Then place the cloned folder wherever you prefer under `resources/` and make sure it is ensured in
+`server.cfg` after `whip_core`.
 
 ## Languages
 
