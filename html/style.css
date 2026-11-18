@@ -1,0 +1,344 @@
+/* WHIP F1 radial, mirrored for the isolated "Vestiti" overlay.
+   Geometry, colours, transitions and the pill come from whip_core/html/css/ui.css §5. */
+
+@font-face {
+    font-family: 'Barlow';
+    font-style: normal;
+    font-weight: 400;
+    font-display: block;
+    src: url('https://cfx-nui-whip_core/html/fonts/barlow-400-latin.woff2') format('woff2');
+}
+@font-face {
+    font-family: 'Barlow';
+    font-style: normal;
+    font-weight: 600;
+    font-display: block;
+    src: url('https://cfx-nui-whip_core/html/fonts/barlow-600-latin.woff2') format('woff2');
+}
+@font-face {
+    font-family: 'Barlow';
+    font-style: normal;
+    font-weight: 700;
+    font-display: block;
+    src: url('https://cfx-nui-whip_core/html/fonts/barlow-700-latin.woff2') format('woff2');
+}
+@font-face {
+    font-family: 'Barlow';
+    font-style: normal;
+    font-weight: 800;
+    font-display: block;
+    src: url('https://cfx-nui-whip_core/html/fonts/barlow-800-latin.woff2') format('woff2');
+}
+
+:root {
+    --ui-font: 'Barlow', 'Segoe UI', sans-serif;
+    --ui-text: rgba(255, 255, 255, 0.93);
+    --ui-text-mid: rgba(255, 255, 255, 0.5);
+    --ui-accent: #60a5fa;
+    --ui-surface: rgba(10, 12, 18, 0.75);
+    --ui-border: rgba(255, 255, 255, 0.10); /* whip_inventory_skin's override */
+    --ui-shadow: 0 4px 20px rgba(0, 0, 0, 0.4), inset 0 1px 0 rgba(255, 255, 255, 0.05);
+    --ui-pill-ink: rgb(10, 12, 18);
+    --ui-ease: cubic-bezier(0.16, 1, 0.3, 1);
+    --ui-fade: 0.18s;
+    --cw-scale: 1;
+}
+
+* { box-sizing: border-box; }
+
+html, body {
+    margin: 0;
+    padding: 0;
+    width: 100%;
+    height: 100%;
+    overflow: hidden;
+    background: transparent;
+    color: var(--ui-text);
+    font-family: var(--ui-font);
+    user-select: none;
+    -webkit-user-select: none;
+}
+
+/* No scrim: WHIP's wheel sits over live gameplay. */
+#root {
+    position: fixed;
+    inset: 0;
+    overflow: hidden;
+    opacity: 0;
+    pointer-events: auto;
+    font-family: var(--ui-font);
+    transition: opacity var(--ui-fade) var(--ui-ease);
+}
+
+#root.hidden { display: none; }
+#root.visible { opacity: 1; }
+
+/* Zero-size anchor at the screen centre, scaled exactly like ui.js's RAD.big. */
+.rad {
+    position: absolute;
+    left: 50%;
+    top: 50%;
+    width: 0;
+    height: 0;
+    transform: scale(var(--cw-scale));
+    transform-origin: 0 0;
+}
+
+.rad-wheel {
+    position: absolute;
+    left: -280px;
+    top: -280px;
+    width: 560px;
+    height: 560px;
+    filter: drop-shadow(0 6px 24px rgba(0, 0, 0, 0.5));
+    transform: scale(0.94);
+    transition: transform 0.28s var(--ui-ease);
+}
+
+#root.visible .rad-wheel { transform: scale(1); }
+
+.rad-wheel > svg {
+    position: absolute;
+    left: 0;
+    top: 0;
+    overflow: visible;
+    pointer-events: none;
+}
+
+/* ---- Beam ---- */
+.rad-beam {
+    opacity: 0;
+    transition: opacity 0.2s ease;
+}
+
+.rad.chosen .rad-beam { opacity: 1; }
+.rad.aim-empty .rad-beam { opacity: 0.35; }
+
+/* ---- Slabs ---- */
+.rad-slab {
+    transition: transform 0.22s var(--ui-ease);
+}
+
+.rad-slab.on {
+    transform: translate(var(--lx), var(--ly));
+}
+
+.rad-shape {
+    fill: rgba(10, 12, 18, 0.84);
+    stroke: rgba(255, 255, 255, 0.1);
+    stroke-width: 1;
+    stroke-linejoin: round;
+    transition: fill 0.15s ease, stroke 0.15s ease;
+}
+
+.rad-slab.on .rad-shape {
+    fill: rgba(255, 255, 255, 0.95);
+    stroke: rgba(255, 255, 255, 0.95);
+}
+
+/* A garment just taken off stays lit until it is selected again or worn again.
+   It is a persistent state, separate from the white slab of the current aim. */
+.rad-slab.latched .rad-shape {
+    fill: rgba(255, 255, 255, 0.92);
+    stroke: #ffffff;
+    filter: drop-shadow(0 0 7px rgba(96, 165, 250, 0.55));
+}
+
+.rad-slab.disabled .rad-shape {
+    fill: rgba(10, 12, 18, 0.62);
+    stroke: rgba(255, 255, 255, 0.05);
+}
+
+.rad-slab.disabled.on .rad-shape {
+    fill: rgba(255, 255, 255, 0.55);
+    stroke: rgba(255, 255, 255, 0.55);
+}
+
+.rad-slab.dropped:not(.on) .rad-shape {
+    stroke: rgba(251, 191, 36, 0.65);
+}
+
+.rad-icon {
+    color: var(--ui-text);
+    transition: color 0.15s ease;
+}
+
+.rad-slab.on .rad-icon,
+.rad-slab.latched .rad-icon { color: var(--ui-pill-ink); }
+
+.rad-label {
+    fill: rgba(255, 255, 255, 0.6);
+    font-family: var(--ui-font);
+    font-size: 11px;
+    font-weight: 700;
+    letter-spacing: 0.01em;
+    text-anchor: middle;
+    dominant-baseline: middle;
+    transition: fill 0.15s ease;
+}
+
+.rad-slab.on .rad-label,
+.rad-slab.latched .rad-label { fill: rgba(10, 12, 18, 0.8); }
+.rad-slab.disabled .rad-label { fill: rgba(255, 255, 255, 0.3); }
+.rad-slab.disabled.on .rad-label { fill: rgba(10, 12, 18, 0.55); }
+
+/* ---- Centre stat disc ---- */
+.rad-disc {
+    position: absolute;
+    left: 192px;
+    top: 192px;
+    width: 176px;
+    height: 176px;
+    isolation: isolate;
+    pointer-events: none;
+}
+
+.rad-disc-clip {
+    position: absolute;
+    inset: 17px;
+    border-radius: 50%;
+    overflow: hidden;
+}
+
+.rad-disc-core {
+    position: absolute;
+    inset: 0;
+    border-radius: 50%;
+    background: rgba(12, 14, 20, 0.96);
+    box-shadow: inset 0 0 0 8px rgba(0, 0, 0, 0.55);
+}
+
+.rad-disc-fill {
+    position: absolute;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    height: 0;
+    background: var(--ui-text);
+    transition: height 0.25s ease;
+}
+
+.rad.chosen .rad-disc-fill.full {
+    height: 100%;
+    transition: height 0.5s var(--ui-ease);
+}
+
+.rad.aim-empty .rad-disc-fill.full { height: 0; }
+
+.rad-disc-ring {
+    position: absolute;
+    inset: 10px;
+    border-radius: 50%;
+    border: 10px solid rgba(255, 255, 255, 0.55);
+    box-shadow: 0 0 0 8px rgba(0, 0, 0, 0.9), 0 0 16px rgba(0, 0, 0, 0.85);
+    transition: border-color 0.25s ease, box-shadow 0.25s ease;
+}
+
+.rad.chosen .rad-disc-ring {
+    border-color: var(--ui-accent);
+    box-shadow: 0 0 0 8px rgba(0, 0, 0, 0.9), 0 0 18px rgba(96, 165, 250, 0.35),
+                0 0 42px rgba(96, 165, 250, 0.15);
+}
+
+.rad.aim-empty .rad-disc-ring {
+    border-color: rgba(255, 255, 255, 0.55);
+    box-shadow: 0 0 0 8px rgba(0, 0, 0, 0.9), 0 0 16px rgba(0, 0, 0, 0.85);
+}
+
+.rad-hero {
+    position: absolute;
+    left: 50%;
+    top: 50%;
+    width: 60px;
+    height: 60px;
+    transform: translate(-50%, -50%);
+    display: none;
+    align-items: center;
+    justify-content: center;
+    color: #fff;
+    mix-blend-mode: difference;
+}
+
+.rad.chosen .rad-hero { display: flex; }
+.rad.aim-empty .rad-hero { display: none; }
+.rad-hero svg { width: 100%; height: 100%; }
+
+/* ---- Neutral hint ---- */
+.rad-hint {
+    position: absolute;
+    inset: 0;
+    display: none;
+    animation: radHintIn 0.25s var(--ui-ease);
+}
+
+.rad:not(.chosen) .rad-hint { display: block; }
+
+.rad-mouse {
+    position: absolute;
+    left: 50%;
+    top: 50%;
+    width: 50px;
+    height: 50px;
+    color: var(--ui-text);
+    transform-origin: 50% 85%;
+    animation: radMouseSway 2.4s ease-in-out infinite;
+}
+
+.rad-mouse svg { width: 100%; height: 100%; }
+
+@keyframes radMouseSway {
+    0%, 100% { transform: translate(-50%, -50%) rotate(-8deg); }
+    50%      { transform: translate(-50%, -50%) rotate(8deg); }
+}
+
+@keyframes radHintIn {
+    from { opacity: 0; transform: scale(0.85); }
+    to   { opacity: 1; transform: scale(1); }
+}
+
+/* ---- The pill: "Indietro" plus the hovered garment's state ---- */
+.rad-pill {
+    position: absolute;
+    left: 0;
+    top: 294px;
+    transform: translateX(-50%);
+    display: flex;
+    align-items: baseline;
+    gap: 12px;
+    padding: 12px 24px;
+    border-radius: 999px;
+    background: var(--ui-surface);
+    border: 1px solid var(--ui-border);
+    box-shadow: var(--ui-shadow);
+    white-space: nowrap;
+    font-family: var(--ui-font);
+    color: var(--ui-text);
+    appearance: none;
+    cursor: pointer;
+    pointer-events: auto;
+    transition: background 0.15s ease, border-color 0.15s ease;
+}
+
+.rad-pill:hover {
+    background: rgba(255, 255, 255, 0.08);
+    border-color: rgba(255, 255, 255, 0.18);
+}
+
+.rad-pill:focus { outline: none; }
+
+.rad-pill-name {
+    font-size: 22px;
+    font-weight: 700;
+    letter-spacing: -0.01em;
+    color: rgba(255, 255, 255, 0.75);
+}
+
+.rad.chosen .rad-pill-name { color: var(--ui-text); }
+
+.rad-pill-desc {
+    font-size: 14px;
+    font-weight: 500;
+    color: rgba(255, 255, 255, 0.55);
+}
+
+.rad-pill-desc:empty { display: none; }

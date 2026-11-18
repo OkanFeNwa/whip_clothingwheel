@@ -1,0 +1,46 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Vestiti</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <div id="root" class="hidden">
+        <div id="radial" class="rad">
+            <div class="rad-wheel">
+                <svg class="rad-beam" viewBox="0 0 560 560" width="560" height="560">
+                    <defs>
+                        <radialGradient id="cwBeamGrad" cx="280" cy="280" r="124" gradientUnits="userSpaceOnUse">
+                            <stop offset="0.7" stop-color="#60a5fa" stop-opacity="0.08"></stop>
+                            <stop offset="1" stop-color="#ffffff" stop-opacity="0.42"></stop>
+                        </radialGradient>
+                    </defs>
+                    <path id="beamPath" fill="url(#cwBeamGrad)"></path>
+                </svg>
+
+                <svg id="svg" viewBox="0 0 560 560" width="560" height="560"></svg>
+
+                <div class="rad-disc">
+                    <div class="rad-disc-clip">
+                        <div class="rad-disc-core"></div>
+                        <div id="discFill" class="rad-disc-fill"></div>
+                    </div>
+                    <div class="rad-disc-ring"></div>
+                    <div id="discHero" class="rad-hero"></div>
+                    <div class="rad-hint">
+                        <div id="mouseHint" class="rad-mouse"></div>
+                    </div>
+                </div>
+            </div>
+
+            <button id="back" class="rad-pill" type="button">
+                <span id="pillName" class="rad-pill-name">Indietro</span>
+                <span id="pillDesc" class="rad-pill-desc"></span>
+            </button>
+        </div>
+    </div>
+    <script src="app.js"></script>
+</body>
+</html>
