@@ -14,12 +14,19 @@ Usage
   python register_models.py --from .\\stream --resource ..\\..
   python register_models.py --from E:\\whip\\output\\models --resource ..\\.. --dry-run
 
-Output schema (slot -> drawable -> sex -> texture -> model):
+Output schema:
 
-  { "hat": { "14": { "male": { "3": "male_p0_np_014_03" },
-                     "female": { "3": "female_p0_np_014_03" } } } }
+  {
+    "byIdentity": {
+      "hat": { "np":    { "14": { "male": { "3": "male_p0_np_014_03" } } },
+               "npnew": { "5":  { "male": { "0": "male_p0_npnew_005_00" } } } }
+    },
+    "hat": { "14": { "male": { "3": "male_p0_np_014_03" } } }
+  }
 
-The server loader also accepts the older flat form slot -> drawable -> model.
+``byIdentity`` keys on (slot, collection token, LOCAL drawable, sex, texture).
+It is authoritative when the client supplies the runtime collection identity.
+The top-level form is kept for the base collection and for older saves.
 """
 
 from __future__ import annotations
@@ -70,32 +77,54 @@ KNOWN_SLOTS = set(PREFIX_SLOT.values()) | set(ANCHOR_SLOT.values()) | {"arms"}
 
 CW_PATTERN = re.compile(r"^cw_(.+?)_(\d{2,3})_(\d{2})\.ydr$", re.IGNORECASE)
 NP_PATTERN = re.compile(
-    r"^(male|female)_p(\d+)_np_(\d{2,3})_(\d{2})\.ydr$", re.IGNORECASE
+    r"^(male|female)_p(\d+)_([a-z0-9]+)_(\d{2,3})_(\d{2})\.ydr$", re.IGNORECASE
 )
 
 
-def add(registry: dict, slot: str, drawable: int, sex: str, texture: int, model: str) -> None:
-    registry.setdefault(slot, {}).setdefault(str(drawable), {}).setdefault(sex, {})[str(texture)] = model
+def add(registry: dict, slot: str, collection: str, drawable: int, sex: str,
+        texture: int, model: str) -> None:
+    """Write both the stable identity key and the legacy drawable key.
+
+    ``GetPedPropIndex`` returns a GLOBAL drawable number that shifts whenever a
+    clothing pack is loaded. The runtime resolves it to
+    (collection name, LOCAL index) with whip_core's collection natives, so the
+    identity branch is authoritative. The legacy branch is kept for the base
+    collection (`np`) and for older saves where no identity was recorded.
+    """
+    identity = registry.setdefault("byIdentity", {})
+    identity.setdefault(slot, {}).setdefault(collection, {}).setdefault(
+        str(drawable), {}
+    ).setdefault(sex, {})[str(texture)] = model
+    if collection == "np":
+        registry.setdefault(slot, {}).setdefault(str(drawable), {}).setdefault(
+            sex, {}
+        )[str(texture)] = model
 
 
-def infer_cw(path: Path) -> tuple[str, int, str, int] | None:
-    """Infer (slot, drawable, sex, texture) from cw_<prefix>_<drawable>_<texture>.ydr."""
+def infer_cw(path: Path) -> tuple[str, str, int, str, int] | None:
+    """Infer (slot, collection, drawable, sex, texture) from cw_* names."""
     m = CW_PATTERN.match(path.name)
     if not m:
         return None
     slot = PREFIX_SLOT.get(m.group(1).lower())
-    return (slot, int(m.group(2)), "any", int(m.group(3))) if slot else None
+    return (slot, "np", int(m.group(2)), "any", int(m.group(3))) if slot else None
 
 
-def infer_np(path: Path) -> tuple[str, int, str, int] | None:
-    """Infer (slot, drawable, sex, texture) from <sex>_p<anchor>_np_<drawable>_<texture>.ydr."""
+def infer_np(path: Path) -> tuple[str, str, int, str, int] | None:
+    """Infer identity from <sex>_p<anchor>_<collection>_<drawable>_<texture>.ydr.
+
+    ``collection`` is the token produced by the exporter from the ped collection
+    name: ``np`` for the base freemode collection, otherwise a stable token such
+    as ``bikerdlc01`` or ``npnew``. Different collections can reuse the same
+    local drawable number for different items, so the token is part of the key.
+    """
     m = NP_PATTERN.match(path.name)
     if not m:
         return None
     slot = ANCHOR_SLOT.get(m.group(2))
     if not slot:
         return None
-    return slot, int(m.group(3)), m.group(1).lower(), int(m.group(4))
+    return slot, m.group(3).lower(), int(m.group(4)), m.group(1).lower(), int(m.group(5))
 
 
 def collect(source: Path) -> tuple[dict, list[str]]:
@@ -135,7 +164,8 @@ def collect(source: Path) -> tuple[dict, list[str]]:
 
         texture = data.get("texture")
         texture = int(texture) if isinstance(texture, int) and texture >= 0 else 0
-        add(registry, slot, drawable, sex, texture, model)
+        collection = str(data.get("collection") or "np").lower()
+        add(registry, slot, collection, drawable, sex, texture, model)
 
     # Fallback for .ydr files without a manifest.
     for ydr in ydrs:
@@ -143,10 +173,10 @@ def collect(source: Path) -> tuple[dict, list[str]]:
             continue
         inferred = infer_np(ydr) or infer_cw(ydr)
         if not inferred:
-            warnings.append(f"ydr {ydr.name}: cannot infer slot/sex/drawable/texture (no manifest)")
+            warnings.append(f"ydr {ydr.name}: cannot infer slot/identity (no manifest)")
             continue
-        slot, drawable, sex, texture = inferred
-        add(registry, slot, drawable, sex, texture, ydr.stem)
+        slot, collection, drawable, sex, texture = inferred
+        add(registry, slot, collection, drawable, sex, texture, ydr.stem)
 
     return registry, warnings
 
@@ -169,19 +199,33 @@ def main() -> int:
     if len(warnings) > 40:
         print(f"[warn] ... and {len(warnings) - 40} more")
 
-    entries = 0
-    for slot, draws in registry.items():
-        for drawable, sexes in draws.items():
-            for sex, textures in sexes.items():
-                entries += len(textures)
-    print(f"[info] {entries} models in {len(registry)} slots")
+    def count(tree: dict) -> int:
+        # Leaves are model strings. The legacy tree is 4 levels deep and the
+        # identity tree 5, so count leaves instead of assuming a fixed depth.
+        total = 0
+        stack = list(tree.values())
+        while stack:
+            node = stack.pop()
+            if isinstance(node, str):
+                total += 1
+            elif isinstance(node, dict):
+                stack.extend(node.values())
+        return total
+
+    identity = registry.get("byIdentity", {})
+    # The whole registry contains the identity tree too, so exclude it from the
+    # legacy count or the number would include every identity model as well.
+    legacy_tree = {k: v for k, v in registry.items() if k != "byIdentity"}
+    print(f"[info] {count(legacy_tree)} legacy models, {count(identity)} identity models "
+          f"in {len(identity)} slots")
 
     if args.dry_run:
-        for slot in sorted(registry):
-            for drawable in sorted(registry[slot], key=int):
-                for sex, textures in sorted(registry[slot][drawable].items()):
-                    for texture, model in sorted(textures.items(), key=lambda kv: int(kv[0])):
-                        print(f"  {slot}[{drawable}] {sex}/{texture} = {model}")
+        for slot in sorted(identity):
+            for collection in sorted(identity[slot]):
+                for drawable in sorted(identity[slot][collection], key=int):
+                    for sex, textures in sorted(identity[slot][collection][drawable].items()):
+                        for texture, model in sorted(textures.items(), key=lambda kv: int(kv[0])):
+                            print(f"  {slot}/{collection}[{drawable}] {sex}/{texture} = {model}")
         return 0
 
     resource = Path(args.resource)

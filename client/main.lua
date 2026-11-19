@@ -435,6 +435,33 @@ RegisterNetEvent('whip_clothingwheel:drop:removeAll', function()
     for id in pairs(dropProps) do removeDrop(id) end
 end)
 
+-- Il server non può leggere le natives di collection: risponde con il nome e
+-- l'indice LOCALE del prop davvero indossato. GetPedPropIndex dà un numero
+-- globale e non basta quando i pack addon spostano gli indici.
+RegisterNetEvent('whip_clothingwheel:identity:request', function(requestId, slotId, propId)
+    local collection, index = 'np', -1
+    local s = ClothingWheel.get(slotId)
+    local ped = PlayerPedId()
+    local prop = s and tonumber(propId) or (s and s.slot) or nil
+
+    if s and s.kind == 'prop' and prop and ped and ped ~= 0
+        and GetPedCollectionNameFromProp and GetPedCollectionLocalIndexFromProp then
+        local global = GetPedPropIndex(ped, prop)
+        if global and global >= 0 then
+            local okName, name = pcall(GetPedCollectionNameFromProp, ped, prop, global)
+            local okIndex, localIndex = pcall(GetPedCollectionLocalIndexFromProp, ped, prop, global)
+            if okName and okIndex and type(localIndex) == 'number' and localIndex >= 0 then
+                collection = (type(name) == 'string' and name ~= '') and name or 'np'
+                index = math.floor(localIndex)
+            end
+        end
+    end
+
+    if Whip.core and Whip.core.Callback then
+        Whip.core:Callback('whip_clothingwheel:identity:report', requestId, collection, index)
+    end
+end)
+
 AddEventHandler('onResourceStop', function(resource)
     if resource ~= GetCurrentResourceName() then return end
     for id in pairs(dropProps) do removeDrop(id) end

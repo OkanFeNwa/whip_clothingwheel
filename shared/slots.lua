@@ -188,13 +188,40 @@ end
 -- Modello del capo a terra
 -- ============================================
 
+--- Normalizza il nome di collection restituito dalle native in un token stabile,
+--- identico a quello usato dall'exporter offline per i nomi dei .ydr.
+--- La collection base dei freemode resta `np` per compatibilità col registro vecchio.
+function ClothingWheel.collectionToken(name)
+    local value = tostring(name or ''):lower()
+    if value == '' or value:find('freemode_01', 1, true) then return 'np' end
+    value = value:gsub('^mp_[mf]_', '')
+    value = value:gsub('^freemode_01_p_?', '')
+    value = value:gsub('^mp_[mf]_', '')
+    value = value:gsub('^p_', '')
+    value = value:gsub('[^a-z0-9]', '')
+    return value ~= '' and value or 'np'
+end
+
+--- Identità stabile di un capo indossato: collection + indice LOCALE.
+--- Il drawable dei metadata è un numero GLOBALE che si sposta quando un pack
+--- aggiunge capi; la coppia restituita qui identifica il modello vero.
+function ClothingWheel.identityOf(e)
+    if type(e) ~= 'table' then return nil, nil end
+    local collection = ClothingWheel.collectionToken(e.collection)
+    local index = tonumber(e.localIndex)
+    if not index or index < 0 or index ~= math.floor(index) then return nil, nil end
+    return collection, math.floor(index)
+end
+
 --- Modello del prop che rappresenta il capo a terra.
 --- Non esiste una native che restituisca il modello world di un drawable indossato
---- (GET_PED_PROP_MODEL non esiste; GetPedPropCollectionName dà solo la collection).
+--- (GET_PED_PROP_MODEL non esiste). Il client risolve l'identità con
+--- GetPedCollectionNameFromProp + GetPedCollectionLocalIndexFromProp.
 --- Ordine di risoluzione:
----   1. Config.DropModels[slot][drawable]  - override esplicito dell'admin
----   2. data/drop_models.json[slot][drawable] - modelli generati da model_forge
----   3. s.model                            - prop generico dello slot
+---   1. Config.DropModels[slot][drawable]          - override esplicito dell'admin
+---   2. data/drop_models.json[slot].byIdentity     - collection + indice locale
+---   3. data/drop_models.json[slot][drawable]      - registro legacy (solo `np`)
+---   4. s.model                                    - prop generico dello slot
 ---@return string model
 function ClothingWheel.dropModel(s, entry)
     entry = type(entry) == 'table' and entry or {}
@@ -210,9 +237,24 @@ function ClothingWheel.dropModel(s, entry)
     end
 
     -- Il registro generato è caricato solo lato server (server/generated_models.lua).
-    if type(GeneratedDropModels) == 'table' and type(GeneratedDropModels.get) == 'function' then
-        local generated = GeneratedDropModels.get(s.id, key, texture, entry.ped)
-        if type(generated) == 'string' and generated ~= '' then return generated end
+    if type(GeneratedDropModels) == 'table' then
+        local collection, index = ClothingWheel.identityOf(entry)
+        if collection then
+            -- L'identità è autorevole: il drawable globale dei metadata si sposta
+            -- con i pack addon, quindi NON possiamo usare il ramo legacy quando
+            -- conosciamo collection + indice locale. Un miss qui significa solo
+            -- che non abbiamo esportato quel capo: meglio il modello generico.
+            if type(GeneratedDropModels.resolveIdentity) == 'function' then
+                local generated = GeneratedDropModels.resolveIdentity(
+                    s.id, collection, index, texture, entry.ped)
+                if type(generated) == 'string' and generated ~= '' then return generated end
+            end
+        elseif type(GeneratedDropModels.get) == 'function' then
+            -- Nessuna identità (save vecchio o client che non ha risposto):
+            -- qui il drawable globale è l'unica chiave disponibile.
+            local generated = GeneratedDropModels.get(s.id, key, texture, entry.ped)
+            if type(generated) == 'string' and generated ~= '' then return generated end
+        end
     end
 
     return s.model
@@ -221,17 +263,24 @@ end
 --- Indica se il modello risolto è quello generato (utile per /cwmodel e i log).
 ---@return boolean
 function ClothingWheel.hasGeneratedModel(s, entry)
-    if type(GeneratedDropModels) ~= 'table' or type(GeneratedDropModels.get) ~= 'function' then
-        return false
-    end
+    if type(GeneratedDropModels) ~= 'table' then return false end
     entry = type(entry) == 'table' and entry or {}
     local drawable = tonumber(entry.drawable)
     if not drawable or drawable < 0 then return false end
-    return GeneratedDropModels.get(s.id, math.floor(drawable),
-        tonumber(entry.texture) or 0, entry.ped) ~= nil
+    local collection, index = ClothingWheel.identityOf(entry)
+    if collection then
+        return type(GeneratedDropModels.resolveIdentity) == 'function'
+            and GeneratedDropModels.resolveIdentity(s.id, collection, index,
+                tonumber(entry.texture) or 0, entry.ped) ~= nil
+    end
+    return type(GeneratedDropModels.get) == 'function'
+        and GeneratedDropModels.get(s.id, math.floor(drawable),
+            tonumber(entry.texture) or 0, entry.ped) ~= nil
 end
 
 --- Dati validi per poter indossare un capo caduto a terra.
+--- L'identità viaggia con la voce: serve al prossimo drop per ritrovare lo
+--- stesso modello anche se il numero globale è cambiato nel frattempo.
 function ClothingWheel.validEntry(s, e)
     if type(e) ~= 'table' then return nil end
     local d, t = tonumber(e.drawable), tonumber(e.texture)
@@ -241,5 +290,11 @@ function ClothingWheel.validEntry(s, e)
     elseif d < 0 then
         return nil
     end
-    return { drawable = math.floor(d), texture = math.floor(t) }
+    local out = { drawable = math.floor(d), texture = math.floor(t) }
+    local collection, index = ClothingWheel.identityOf(e)
+    if collection and s.kind == 'prop' then
+        out.collection = collection
+        out.localIndex = index
+    end
+    return out
 end

@@ -32,8 +32,11 @@ function Drops.load(source)
             -- in quel caso ricalcoliamo il modello, così il nuovo mapping vale
             -- anche sui capi già a terra.
             if not model or model == s.model then
+                -- collection + indice locale viaggiano nei metadata: senza di
+                -- essi il drawable globale darebbe un capo diverso con gli addon.
                 model = ClothingWheel.dropModel(s, {
                     drawable = d.drawable, texture = d.texture, ped = d.ped,
+                    collection = d.collection, localIndex = d.localIndex,
                 })
             end
             TriggerClientEvent('whip_clothingwheel:drop:spawn', source, id, model,
@@ -84,9 +87,10 @@ end
 ---@param source number
 ---@param id string
 ---@param coords vector3|vector4|table|nil  dove lasciarlo; nil = dove sta il giocatore
+---@param identity table|nil  opzionale: { collection, localIndex } già risolto dal client
 ---@return boolean ok
 ---@return string|nil why
-function Drops.Lose(source, id, coords)
+function Drops.Lose(source, id, coords, identity)
     local s = ClothingWheel.get(id)
     if not s then return false, ClothingWheel.locale('error.unknownSlot') end
 
@@ -95,10 +99,30 @@ function Drops.Lose(source, id, coords)
         return false, ClothingWheel.locale('error.notLoaded')
     end
 
-    local entry = ClothingWheel.entry(look, s)
+    local entry = ClothingWheel.validEntry(s, ClothingWheel.entry(look, s))
+        or ClothingWheel.entry(look, s)
     local name = ClothingWheel.label(s)
     if ClothingWheel.isOff(s, entry) then
         return false, ClothingWheel.locale('error.notWearing', name:lower())
+    end
+
+    -- Chiediamo l'identità solo dopo aver verificato che il capo sia indossato.
+    -- Il numero globale nei metadata non identifica il modello con i pack addon.
+    if s.kind == 'prop' then
+        identity = identity or (type(Identity) == 'table' and Identity.of and Identity.of(source, id)) or nil
+        local collection, index = ClothingWheel.identityOf(identity)
+
+        -- Se il client non risponde in tempo, il prestito salvato quando il capo
+        -- e' stato tolto conserva comunque collection + indice locale.
+        if not collection then
+            local stashed = Appearance.peekStash(source, id)
+            collection, index = ClothingWheel.identityOf(stashed)
+        end
+
+        if collection then
+            entry.collection = collection
+            entry.localIndex = index
+        end
     end
 
     if Drops.Has(source, id) then
@@ -122,6 +146,8 @@ function Drops.Lose(source, id, coords)
         heading = tonumber(heading) or 0.0,
         drawable = entry.drawable,
         texture = entry.texture,
+        collection = entry.collection,
+        localIndex = entry.localIndex,
         ped = look.model,
         model = model,
     }

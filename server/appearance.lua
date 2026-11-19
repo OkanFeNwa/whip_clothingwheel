@@ -50,7 +50,16 @@ end
 
 function Appearance.stashEntry(source, id, entry)
     local stash = stashOf(source)
-    stash[id] = { drawable = entry.drawable, texture = entry.texture }
+    local saved = { drawable = entry.drawable, texture = entry.texture }
+    -- L'identità non sta nei metadata appearance (il core la rimuove), ma deve
+    -- sopravvivere nel prestito: serve se il capo torna a terra prima che il
+    -- client riesca a rispondere alla richiesta delle natives di collection.
+    local collection, index = ClothingWheel.identityOf(entry)
+    if collection then
+        saved.collection = collection
+        saved.localIndex = index
+    end
+    stash[id] = saved
     saveStash(source, stash)
 end
 

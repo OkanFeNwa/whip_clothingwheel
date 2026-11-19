@@ -57,8 +57,8 @@ Whip.register(function()
 end)
 
 -- API per altri script server-side.
-exports('LoseItem', function(source, slotId, coords)
-    return Drops.Lose(source, slotId, coords)
+exports('LoseItem', function(source, slotId, coords, identity)
+    return Drops.Lose(source, slotId, coords, identity)
 end)
 
 exports('Restore', function(source)
@@ -146,6 +146,18 @@ RegisterCommand('cwmodel', function(source, args)
             local entry = ClothingWheel.entry(look, s)
             if not ClothingWheel.isOff(s, entry) then
                 found = found + 1
+                if s.kind == 'prop' and type(Identity) == 'table' and Identity.of then
+                    local identity = Identity.of(source, s.id)
+                    local collection, index = ClothingWheel.identityOf(identity)
+                    if not collection then
+                        local stashed = Appearance.peekStash(source, s.id)
+                        collection, index = ClothingWheel.identityOf(stashed)
+                    end
+                    if collection then
+                        entry.collection = collection
+                        entry.localIndex = index
+                    end
+                end
                 local model = ClothingWheel.dropModel(s, entry)
                 local hint = ''
                 if model == s.model then
@@ -155,6 +167,9 @@ RegisterCommand('cwmodel', function(source, args)
                 end
                 local msg = ClothingWheel.locale('command.modelLine',
                     s.id, entry.drawable, entry.texture, model, hint)
+                if entry.collection then
+                    msg = ('%s | collection=%s local=%d'):format(msg, entry.collection, entry.localIndex)
+                end
                 print('[whip_clothingwheel] ' .. msg)
                 notify(source, msg, 'info')
             end

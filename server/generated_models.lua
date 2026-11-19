@@ -10,6 +10,7 @@ local REGISTRY = 'data/drop_models.json'
 --- @field map table<string, table<string, table>>
 GeneratedDropModels = {
     map = {},
+    identityMap = {},
 }
 
 local function readRegistry()
@@ -75,57 +76,8 @@ local function normalizeEntry(value)
     return nil
 end
 
---- Ricarica il registro da disco. Chiamata all'avvio e da /cwmodel reload.
---- @return integer numero di modelli indicizzati
-function GeneratedDropModels.reload()
-    local decoded = readRegistry()
-    local map = {}
-
-    for slot, draws in pairs(decoded) do
-        if type(slot) == 'string' and type(draws) == 'table' then
-            local slotMap = {}
-            for key, value in pairs(draws) do
-                if isTextureKey(key) then
-                    local entry = normalizeEntry(value)
-                    if entry then slotMap[tostring(key)] = entry end
-                end
-            end
-            if next(slotMap) then map[slot] = slotMap end
-        end
-    end
-
-    GeneratedDropModels.map = map
-
-    local slots, models = 0, 0
-    for _, draws in pairs(map) do
-        slots = slots + 1
-        for _, entry in pairs(draws) do
-            if type(entry) == 'string' then
-                models = models + 1
-            else
-                for _, bucket in pairs(entry) do
-                    for _ in pairs(bucket) do models = models + 1 end
-                end
-            end
-        end
-    end
-    print(('[whip_clothingwheel] drop_models.json: %d slot, %d modelli'):format(slots, models))
-    return models
-end
-
---- Restituisce il modello generato per (slot, drawable, texture, ped), o nil.
---- @param slot string
---- @param drawable integer|string
---- @param texture integer|string|nil
---- @param ped string|nil  nome del ped dell'appearance (determina il sesso)
---- @return string|nil
-function GeneratedDropModels.get(slot, drawable, texture, ped)
-    if type(slot) ~= 'string' or drawable == nil then return nil end
-    local draws = GeneratedDropModels.map[slot]
-    if type(draws) ~= 'table' then return nil end
-    local entry = draws[tostring(drawable)]
-    if not entry then return nil end
-
+--- Sceglie la variante di sesso/testura da una voce normalizzata del registro.
+local function chooseModel(entry, texture, ped)
     if type(entry) == 'string' then return validModel(entry) end
     if type(entry) ~= 'table' then return nil end
 
@@ -156,6 +108,105 @@ function GeneratedDropModels.get(slot, drawable, texture, ped)
         end
     end
     return nil
+end
+
+--- Conta le foglie modello: il registro legacy è profondo 4 livelli, quello
+--- identità 5, quindi non basta fermarsi a una profondità fissa.
+local function countModels(tree)
+    local models = 0
+    local function walk(node)
+        if type(node) == 'string' then
+            models = models + 1
+        elseif type(node) == 'table' then
+            for _, child in pairs(node) do walk(child) end
+        end
+    end
+    walk(tree)
+    return models
+end
+
+--- Ricarica il registro da disco. Chiamata all'avvio e da /cwmodel reload.
+--- @return integer numero di modelli indicizzati (identità + legacy)
+function GeneratedDropModels.reload()
+    local decoded = readRegistry()
+    local map, identities = {}, {}
+
+    -- Formato legacy: slot -> drawable globale -> sesso -> texture -> modello.
+    for slot, draws in pairs(decoded) do
+        if type(slot) == 'string' and slot ~= 'byIdentity' and type(draws) == 'table' then
+            local slotMap = {}
+            for key, value in pairs(draws) do
+                if isTextureKey(key) then
+                    local entry = normalizeEntry(value)
+                    if entry then slotMap[tostring(key)] = entry end
+                end
+            end
+            if next(slotMap) then map[slot] = slotMap end
+        end
+    end
+
+    -- Formato autorevole: slot -> collection -> indice LOCALE -> sesso -> texture.
+    local rawIdentities = decoded.byIdentity
+    if type(rawIdentities) == 'table' then
+        for slot, collections in pairs(rawIdentities) do
+            if type(slot) == 'string' and type(collections) == 'table' then
+                local slotMap = {}
+                for collection, draws in pairs(collections) do
+                    if type(collection) == 'string' and type(draws) == 'table' then
+                        local collectionMap = {}
+                        for key, value in pairs(draws) do
+                            if isTextureKey(key) then
+                                local entry = normalizeEntry(value)
+                                if entry then collectionMap[tostring(key)] = entry end
+                            end
+                        end
+                        if next(collectionMap) then slotMap[collection] = collectionMap end
+                    end
+                end
+                if next(slotMap) then identities[slot] = slotMap end
+            end
+        end
+    end
+
+    GeneratedDropModels.map = map
+    GeneratedDropModels.identityMap = identities
+
+    local total = countModels(map) + countModels(identities)
+    local legacySlots, identitySlots = 0, 0
+    for _ in pairs(map) do legacySlots = legacySlots + 1 end
+    for _ in pairs(identities) do identitySlots = identitySlots + 1 end
+    print(('[whip_clothingwheel] drop_models.json: %d slot legacy + %d slot identità, %d modelli')
+        :format(legacySlots, identitySlots, total))
+    return total
+end
+
+--- Restituisce il modello generato per (slot, drawable, texture, ped), o nil.
+--- @param slot string
+--- @param drawable integer|string
+--- @param texture integer|string|nil
+--- @param ped string|nil  nome del ped dell'appearance (determina il sesso)
+--- @return string|nil
+function GeneratedDropModels.get(slot, drawable, texture, ped)
+    if type(slot) ~= 'string' or drawable == nil then return nil end
+    local draws = GeneratedDropModels.map[slot]
+    if type(draws) ~= 'table' then return nil end
+    return chooseModel(draws[tostring(drawable)], texture, ped)
+end
+
+--- Restituisce il modello generato per l'identità stabile del capo.
+--- @param slot string
+--- @param collection string  token normalizzato (np, vinewood, npnew, ...)
+--- @param index integer       indice LOCALE dentro la collection
+--- @param texture integer|string|nil
+--- @param ped string|nil
+--- @return string|nil
+function GeneratedDropModels.resolveIdentity(slot, collection, index, texture, ped)
+    if type(slot) ~= 'string' or type(collection) ~= 'string' or index == nil then return nil end
+    local collections = GeneratedDropModels.identityMap[slot]
+    if type(collections) ~= 'table' then return nil end
+    local draws = collections[collection]
+    if type(draws) ~= 'table' then return nil end
+    return chooseModel(draws[tostring(math.floor(tonumber(index) or -1))], texture, ped)
 end
 
 GeneratedDropModels.reload()
